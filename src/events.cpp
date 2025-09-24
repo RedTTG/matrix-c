@@ -42,6 +42,8 @@ void handleX11Events(const renderer *rnd) {
                 // std::cout << "Key pressed: " << static_cast<XIRawEvent *>(event.xcookie.data)->detail << std::endl;
             } else if (event.xcookie.evtype == XI_RawKeyRelease) {
                 rnd->events->keysPressed--;
+                if (rnd->events->keysPressed < 0)
+                    rnd->events->keysPressed = 0;
                 // std::cout << "Key released: " << static_cast<XIRawEvent *>(event.xcookie.data)->detail << std::endl;
             } else if (event.xcookie.evtype == XI_RawButtonPress) {
                 handleMousePress(rnd->events, static_cast<XIRawEvent *>(event.xcookie.data)->detail, true);
@@ -55,6 +57,8 @@ void handleX11Events(const renderer *rnd) {
                 // std::cout << "X11 Key pressed: " << event.xkey.keycode << std::endl;
             } else if (event.type == KeyRelease) {
                 rnd->events->keysPressed--;
+                if (rnd->events->keysPressed < 0)
+                    rnd->events->keysPressed = 0;
                 // std::cout << "X11 Key released: " << event.xkey.keycode << std::endl;
             } else if (event.type == ButtonPress) {
                 handleMousePress(rnd->events, event.xbutton.button, true);
