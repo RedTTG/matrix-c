@@ -1,6 +1,9 @@
 #ifndef OPTIONS_H
 #define OPTIONS_H
 #include <cstdint>
+#include <optional>
+#include <string>
+
 #include "glad.h"
 
 #include "help_message.h"
@@ -23,6 +26,7 @@ struct options {
     GLfloat ghostingPreviousFrameOpacity = 0.99f;
     float swapTime = 1.0f / 60.0f;  // Framerate basically
     bool loopWithSwap = true;
+    std::optional<std::string> wallpaperImagePath = std::nullopt;
 
     void maskPostProcessingOptionsWithUserAllowed();
 };

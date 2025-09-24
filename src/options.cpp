@@ -38,6 +38,10 @@ options* parseOptions(int argc, char *argv[]) {
         } else if (arg.find("--app=") == 0) {
             sscanf(argv[i], "--app=%255s", opts->app);
             hasSetApp = true;
+        } else if (arg.find("--image=") == 0) {
+            auto buffer = new char[256];
+            sscanf(argv[i], "--image=%255s", buffer);
+            opts->wallpaperImagePath = std::string(buffer);
         } else {
             std::cerr << "Unknown argument: " << arg << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(10));

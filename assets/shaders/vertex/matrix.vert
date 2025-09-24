@@ -1,4 +1,3 @@
-#shader vertex
 #version 330 core
 struct CharacterInfo {
     uint xOffset;
@@ -15,6 +14,7 @@ layout(std140) uniform u_AtlasBuffer {
 };
 
 uniform mat4 u_Projection;
+uniform vec2 u_ViewportSize;
 uniform vec2 u_AtlasTextureSize;
 uniform int u_MaxCharacters;
 uniform float u_CharacterScaling;
@@ -24,6 +24,7 @@ uniform int u_Rotation;
 out float v_ColorOffset;
 flat out int v_Spark;
 out vec2 v_TexCoord;
+out vec2 v_ScreenCoord;
 
 int generateRandomIndex(int instanceID, int maxIndex) {
     return abs(int(mod(floor(instanceID + u_Time * 100), float(maxIndex))));
@@ -33,7 +34,7 @@ void main()
 {
     // Get a random index for the character data
     int randomIndex = generateRandomIndex(gl_InstanceID+1, u_MaxCharacters);
-//    int randomIndex = gl_InstanceID;
+    //    int randomIndex = gl_InstanceID;
 
     // Fetch the character data from the texture buffer using the random index
     CharacterInfo characterInfo = characterInfoList[randomIndex];
@@ -60,6 +61,7 @@ void main()
 
     // Add the vertex position in NDC
     vec2 screenPosition = position + (vertexPosition * u_CharacterScaling);
+    v_ScreenCoord = vec2(1.0) - vec2(1.0 - (screenPosition.x / u_ViewportSize.x), screenPosition.y / u_ViewportSize.y);
     vec2 atlasPosition = vec2(glyphXOffset, glyphYOffset) + vertexPosition;
 
     // Calculate the center of the character
@@ -74,38 +76,4 @@ void main()
     v_ColorOffset = colorOffset;
     v_Spark = spark;
     v_TexCoord = vec2(atlasPosition.x, u_AtlasTextureSize.y - atlasPosition.y) / u_AtlasTextureSize;
-}
-
-#shader fragment
-#version 330 core
-out vec4 fragColor;
-
-uniform sampler2D u_AtlasTexture;
-uniform float u_BaseColor;
-
-in float v_ColorOffset;
-flat in int v_Spark;
-in vec2 v_TexCoord;
-
-vec3 hueToRgb(float hue) {
-    float r = abs(hue * 6.0 - 3.0) - 1.0;
-    float g = 2.0 - abs(hue * 6.0 - 2.0);
-    float b = 2.0 - abs(hue * 6.0 - 4.0);
-    return clamp(vec3(r, g, b), 0.0, 1.0);
-}
-
-void main()
-{
-    float glyphColor = texture(u_AtlasTexture, v_TexCoord).r;
-
-    vec3 color;
-
-    if (v_Spark == 0) {
-        color = vec3(1.0, 1.0, 1.0);
-    } else {
-        float hue = mod(u_BaseColor + v_ColorOffset, 1.0);
-        color = hueToRgb(hue);
-    }
-
-    fragColor = vec4(color * glyphColor, glyphColor);
 }

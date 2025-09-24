@@ -2,7 +2,9 @@
 #define MATRIX_H
 #include <apps.h>
 #include <fonts.h>
-#include "matrix_shader.h"
+#include "matrix_vertex_shader.h"
+#include "matrix_fragment_rainbow_shader.h"
+#include "matrix_fragment_wallpaper_shader.h"
 
 #include "glad.h"
 
@@ -47,13 +49,14 @@ private:
     static float random_td_float(float a, float b);
     static int randomMultiplier();
     static int randomSpark();
-    static int randomSpeed();
+    int randomSpeed() const;
     static float randomColorOffset();
     void resetRain(int index);
     void incrementRain(int index, bool reassigned);
 
     ShaderProgram *program{};
     FontAtlas *atlas{};
+    GLuint wallpaperTexture;
     GLuint ui_BaseColor{}, ui_Time{};
     GLuint vertexArray{}, vertexBuffer{};
     std::vector<RainDrawData> rainDrawData;
@@ -61,6 +64,7 @@ private:
     float baseColor = 0.0f;
     float mouseRadius = 0.0f;
     int activeCursorPardons = 0;
+    bool useWallPaperShader = false;
     const float rot_d15 = MATRIX_ROTATION / 15.0;
     const float rot_d15_m2 = rot_d15 * 2;
     const float rot_d15_d2 = rot_d15 / 2;

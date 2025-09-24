@@ -5,8 +5,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <cmath>
+
+#include "helper.h"
 #include "matrix_font.h"
 #include "matrix_font_info.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 
 void MatrixApp::setup() {
     rnd->opts->postProcessingOptions |= GHOSTING;
@@ -15,19 +20,38 @@ void MatrixApp::setup() {
     // Handle font initialization
     atlas = createFontTextureAtlas(matrixFont, &matrixFontInfo);
 
-    // Handle program initialization
-    program = new ShaderProgram();
-    program->loadShader(matrixShader, sizeof(matrixShader));
-    program->useProgram();
+    int rainLimit = MATRIX_RAIN_LIMIT;
 
-    const float characterScale = static_cast<float>(rnd->opts->height) / (MATRIX_DEBUG ? 20.0 : 70.0) / static_cast<float>(matrixFontInfo.size);
+
+    // Calculate character scale and mouse radius
+    float characterScale = static_cast<float>(rnd->opts->height) / (MATRIX_DEBUG ? 20.0 : 70.0) / static_cast<float>(matrixFontInfo.size);
     mouseRadius = rnd->opts->height / 10.0f;
 
+
+    // Handle program initialization
+    program = new ShaderProgram();
+    program->loadShader(matrixVertexShader, sizeof(matrixVertexShader), GL_VERTEX_SHADER);
+    // Check the wallpaper image is valid or use rainbow shader
+    if (rnd->opts->wallpaperImagePath.has_value() && checkFileExists(rnd->opts->wallpaperImagePath.value())) {
+        program->loadShader(matrixFragWallPaperShader, sizeof(matrixFragWallPaperShader), GL_FRAGMENT_SHADER);
+        useWallPaperShader = true;
+        rnd->opts->ghostingPreviousFrameOpacity = 0.998f;
+        rainLimit *= 1.5;
+    } else {
+        program->loadShader(matrixFragRainbowShader, sizeof(matrixFragRainbowShader), GL_FRAGMENT_SHADER);
+    }
+    program->linkProgram();
+    program->useProgram();
+
+    // Get uniform locations
     GL_CHECK(glUniform1i(program->getUniformLocation("u_AtlasTexture"), 0));
     GL_CHECK(glUniform1i(program->getUniformLocation("u_MaxCharacters"), matrixFontInfo.characterCount-1));
     GL_CHECK(glUniform1i(program->getUniformLocation("u_Rotation"), MATRIX_ROTATION));
     GL_CHECK(glUniform1f(program->getUniformLocation("u_CharacterScaling"), characterScale));
     GL_CHECK(glUniform2f(program->getUniformLocation("u_AtlasTextureSize"), atlas->atlasWidth, atlas->atlasHeight));
+    GL_CHECK(glUniform2f(program->getUniformLocation("u_ViewportSize"),
+    static_cast<float>(rnd->opts->width),
+    static_cast<float>(rnd->opts->height)));
 
     const GLuint blockIndex = program->getUniformBlockIndex("u_AtlasBuffer");
     program->uniformBlockBinding(blockIndex, 0);
@@ -40,8 +64,8 @@ void MatrixApp::setup() {
     ui_Time = program->getUniformLocation("u_Time");
 
     // Handle vertex buffer initialization
-    rainDrawData.resize(MATRIX_RAIN_LIMIT);
-    rainData.resize(MATRIX_RAIN_LIMIT);
+    rainDrawData.resize(rainLimit);
+    rainData.resize(rainLimit);
 
     GL_CHECK(glGenVertexArrays(1, &vertexArray));
     GL_CHECK(glBindVertexArray(vertexArray));
@@ -49,7 +73,7 @@ void MatrixApp::setup() {
     GL_CHECK(glGenBuffers(1, &vertexBuffer));
     GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer));
     GL_CHECK(
-        glBufferData(GL_ARRAY_BUFFER, MATRIX_RAIN_LIMIT * sizeof(RainDrawData), nullptr,
+        glBufferData(GL_ARRAY_BUFFER, rainDrawData.capacity() * sizeof(RainDrawData), nullptr,
             GL_STREAM_DRAW));
 
     GL_CHECK(glVertexAttribPointer(
@@ -85,7 +109,7 @@ void MatrixApp::setup() {
     GL_CHECK(glVertexAttribDivisor(2, 1));
 
     // Initialize vertices
-    for (int i = 0; i < MATRIX_RAIN_LIMIT; ++i) {
+    for (int i = 0; i < rainData.capacity(); ++i) {
         if constexpr (MATRIX_DEBUG) {
             rainDrawData[i].x = matrixFontInfo.characterInfoList[i].xOffset * characterScale;
             rainDrawData[i].y = matrixFontInfo.characterInfoList[i].yOffset * characterScale;
@@ -102,6 +126,23 @@ void MatrixApp::setup() {
             rainData[i].speed *= -1;
         }
     }
+
+    // Load and bind wallpaper texture if needed
+    if (useWallPaperShader) {
+        int texWidth, texHeight, texChannels;
+        unsigned char* imageData = stbi_load(rnd->opts->wallpaperImagePath.value().c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        if (imageData) {
+            GL_CHECK(glGenTextures(1, &wallpaperTexture));
+            GL_CHECK(glActiveTexture(GL_TEXTURE1));
+            GL_CHECK(glBindTexture(GL_TEXTURE_2D, wallpaperTexture));
+            GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData));
+            GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+            GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+            GL_CHECK(glUniform1i(program->getUniformLocation("u_WallpaperTexture"), 1));
+            stbi_image_free(imageData);
+        }
+    }
+
 }
 
 void MatrixApp::loop() {
@@ -111,6 +152,11 @@ void MatrixApp::loop() {
     GL_CHECK(glActiveTexture(GL_TEXTURE0));
     GL_CHECK(glBindTexture(GL_TEXTURE_2D, atlas->glyphTexture));
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, atlas->glyphBuffer);
+
+    if (useWallPaperShader) {
+        GL_CHECK(glActiveTexture(GL_TEXTURE1));
+        GL_CHECK(glBindTexture(GL_TEXTURE_2D, wallpaperTexture));
+    }
 
     GL_CHECK(glUniform1f(ui_BaseColor, baseColor));
     GL_CHECK(glUniform1f(ui_Time, rnd->clock->floatTime()));
@@ -122,14 +168,14 @@ void MatrixApp::loop() {
         amountOfReassignedRaindrops += MATRIX_DRAW_STRENGTH;
     }
 
-    if (amountOfReassignedRaindrops > MATRIX_RAIN_LIMIT - activeCursorPardons) {
-        amountOfReassignedRaindrops = MATRIX_RAIN_LIMIT - activeCursorPardons;
+    if (amountOfReassignedRaindrops > rainData.capacity() - activeCursorPardons) {
+        amountOfReassignedRaindrops = rainData.capacity() - activeCursorPardons;
     }
 
-    const int reassignedRaindrop = amountOfReassignedRaindrops > 0 ? random_int(0, MATRIX_RAIN_LIMIT - 1) : -1;
+    const int reassignedRaindrop = amountOfReassignedRaindrops > 0 ? random_int(0, rainData.capacity() - 1) : -1;
 
     int activeCursorPardons = 0;
-    for (int i = 0; i < MATRIX_RAIN_LIMIT; ++i) {
+    for (int i = 0; i < rainData.capacity(); ++i) {
         incrementRain(i, i == reassignedRaindrop);
         if (rainData[i].cursorPardons > 0) {
             activeCursorPardons++;
@@ -141,7 +187,7 @@ void MatrixApp::loop() {
 
     // Render
     GL_CHECK(glBindVertexArray(vertexArray));
-    GL_CHECK(glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, MATRIX_RAIN_LIMIT));
+    GL_CHECK(glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, rainData.capacity()));
     // rnd->fboPTextureOutput = atlas->glyphTexture;
 }
 
@@ -181,7 +227,7 @@ int MatrixApp::randomSpark() {
     return random_int(0, MATRIX_CHANCE_OF_SPARK);
 }
 
-int MatrixApp::randomSpeed() {
+int MatrixApp::randomSpeed() const {
     return random_td_float(10, 20);
 }
 
@@ -194,6 +240,9 @@ void MatrixApp::resetRain(const int index) {
     rainDrawData[index].spark = randomSpark();
     rainDrawData[index].colorOffset = randomColorOffset();
     rainData[index].speed = randomSpeed();
+    if constexpr (MATRIX_UP) {
+        rainData[index].speed *= -1;
+    }
 }
 
 void MatrixApp::incrementRain(const int index, const bool reassigned) {
@@ -260,7 +309,7 @@ void MatrixApp::incrementRain(const int index, const bool reassigned) {
 
 
     // Finally check the position of the raindrop to see if it needs to be reset
-    if constexpr (MATRIX_UP && rainDrawData[index].y >= rnd->opts->height) {
+    if (MATRIX_UP && rainDrawData[index].y >= rnd->opts->height) {
         rainDrawData[index].y = 0;
         resetRain(index);
     } else if (rainDrawData[index].y < 0) {

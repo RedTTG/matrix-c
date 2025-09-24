@@ -418,7 +418,7 @@ void renderer::frameEnd() {
     if (opts->postProcessingOptions & GHOSTING) {
         _sampleFrameBuffersForPostProcessing();
         GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, fboM));
-        clear();;
+        clear();
         ppGhostingProgram->useProgram();
 
         GL_CHECK(glUniform1i(ppGhostingProgram->getUniformLocation("u_textureC"), 0));

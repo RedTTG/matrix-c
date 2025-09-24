@@ -25,3 +25,7 @@ void createQuadVertexData(renderer *rnd, float quadWidth, float quadHeight, GLfl
         vertices[i] = quadVertices[i];
     }
 }
+
+bool checkFileExists(std::string path) {
+    return access(path.c_str(), F_OK) != -1;
+}

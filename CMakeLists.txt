@@ -57,7 +57,9 @@ embed_resource("assets/help_message.txt" "generated/help_message.h" "helpMessage
 embed_resource("assets/apps_message.txt" "generated/apps_message.h" "appsMessage")
 
 embed_resource("assets/shaders/triangle.glsl" "generated/triangle_shader.h" "triangleShader")
-embed_resource("assets/shaders/matrix.glsl" "generated/matrix_shader.h" "matrixShader")
+embed_resource("assets/shaders/vertex/matrix.vert" "generated/matrix_vertex_shader.h" "matrixVertexShader")
+embed_resource("assets/shaders/fragment/matrix_rainbow.frag" "generated/matrix_fragment_rainbow_shader.h" "matrixFragRainbowShader")
+embed_resource("assets/shaders/fragment/matrix_wallpaper.frag" "generated/matrix_fragment_wallpaper_shader.h" "matrixFragWallPaperShader")
 embed_resource("assets/shaders/vertex/cursor_motion.vert" "generated/cursor_motion_vertex_shader.h" "cursorMotionVertexShader")
 embed_resource("assets/shaders/fragment/debug.frag" "generated/debug_fragment_shader.h" "debugFragmentShader")
 embed_resource("assets/shaders/fragment/basic_texture_fragment_shader.frag" "generated/basic_texture_fragment_shader.h" "basicTextureFragmentShader")

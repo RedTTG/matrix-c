@@ -6,3 +6,4 @@ usage:
     --width: set the width of the window
     --height: set the height of the window
     --app: set the app to run
+    --image: set the image to use as wallpaper
