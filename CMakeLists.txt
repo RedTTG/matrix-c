@@ -57,6 +57,8 @@ embed_resource("assets/help_message.txt" "generated/help_message.h" "helpMessage
 embed_resource("assets/apps_message.txt" "generated/apps_message.h" "appsMessage")
 
 embed_resource("assets/shaders/triangle.glsl" "generated/triangle_shader.h" "triangleShader")
+embed_resource("assets/shaders/sprite_shader.glsl" "generated/sprite_shader.h" "spriteShader")
+embed_resource("assets/shaders/sprite_glow_shader.glsl" "generated/sprite_glow_shader.h" "spriteGlowShader")
 embed_resource("assets/shaders/vertex/matrix.vert" "generated/matrix_vertex_shader.h" "matrixVertexShader")
 embed_resource("assets/shaders/fragment/matrix_rainbow.frag" "generated/matrix_fragment_rainbow_shader.h" "matrixFragRainbowShader")
 embed_resource("assets/shaders/fragment/matrix_wallpaper.frag" "generated/matrix_fragment_wallpaper_shader.h" "matrixFragWallPaperShader")
@@ -69,11 +71,16 @@ embed_resource("assets/shaders/fragment/blur_fragment_shader.frag" "generated/bl
 
 embed_resource("assets/fonts/matrix_font.raw" "generated/matrix_font.h" "matrixFont")
 
+embed_resource("assets/sprites/Cat.rgba" "generated/cat_atlas_texture.h" "catAtlasTexture")
+embed_resource("assets/sprites/Letters.rgba" "generated/letter_atlas_texture.h" "letterAtlasTexture")
+embed_resource("assets/sprites/UI.rgba" "generated/ui_atlas_texture.h" "uiAtlasTexture")
+
 # Add executable
 add_executable(matrix
         src/glad.c
         src/main.cpp
         src/shader.cpp
+        src/sprite.cpp
         src/options.cpp
         src/renderer.cpp
         src/events.cpp
@@ -84,6 +91,8 @@ add_executable(matrix
         src/apps/triangle.cpp
         src/apps.cpp
         src/apps/matrix.cpp
+        src/apps/matrix_cat/matrix_cat_extension.cpp
+        src/apps/matrix_cat/matrix_cat_animation.cpp
         src/apps/debug.cpp
 )
 

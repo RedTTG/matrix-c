@@ -3,3 +3,8 @@
 /.venv
 /generated
 atlas_debug.png
+/python_generators/debug/
+/assets/sprites/*.png
+/assets/sprites/*.rgba
+/assets/sprites/include/*
+/assets/sprites/Cat/*.ase
