@@ -93,4 +93,5 @@ void MatrixApp::catLoop() {
 
     // Render the cat
     cat.catAnimation->render(rnd->clock->deltaTime);
+    cat.catAnimation->logic(rnd->clock->deltaTime);
 }

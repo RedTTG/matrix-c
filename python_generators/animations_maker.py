@@ -15,8 +15,8 @@ ATLAS_LIST = [
         "name_upper": "CAT_ANIMATIONS",
         "animations_name": "catAnimations",
         "texture_size_name": "catAtlasTextureSize",
-        "sx": 64,
-        "sy": 68,
+        "sx": 128,
+        "sy": 128,
     },
     {
         "file": "Letters",

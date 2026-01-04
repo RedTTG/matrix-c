@@ -5,10 +5,10 @@ CatAnimationManager::CatAnimationManager(CatData &catData, float screenScale, Re
     screenArea(catData.screenArea),
     screenScale(screenScale),
     screenSize(screenSize) {
-    initializeSprite(eyesSprite, CAT_EYES_OPEN);
-    initializeSprite(faceSprite, CAT_FACE_SMILE);
+    initializeSprite(eyesSprite, CAT_EYES_IDLE);
+    initializeSprite(faceSprite, CAT_FACE_IDLE);
     initializeSprite(hairSprite, CAT_HAIR_IDLE);
-    initializeSprite(clothesSprite, CAT_CLOTHES);
+    initializeSprite(clothesSprite, CAT_CLOTHES_IDLE);
 }
 
 void CatAnimationManager::render(const float deltaTime) {
@@ -24,6 +24,7 @@ void CatAnimationManager::render(const float deltaTime) {
         const auto [layer, animationId, nextAnimationId] = singleAnim;
         if (Sprite *sprite = getSpriteByLayer(layer); sprite->getAnimationLooped() > 0) {
             sprite->setAnimation(nextAnimationId);
+            sprite->setFPS(12); // reset to default FPS
             singleFireAnimations.erase(singleFireAnimations.begin() + i);
         } else {
             ++i;
@@ -35,33 +36,32 @@ void CatAnimationManager::render(const float deltaTime) {
     faceSprite->render();
     hairSprite->render();
     eyesSprite->render();
+}
 
+void CatAnimationManager::logic(const float deltaTime) {
     // Increment timers
     blinkTimer += deltaTime;
+    sleepTimer += deltaTime;
 
     // Check for random events
     if (const auto anim = eyesSprite->getCurrentAnimation();
-        (anim == CAT_EYES_STAY_OPEN || anim == CAT_EYES_OPEN) && blinkTimer > 3) {
-        fireSingleAnimation(LAYER_EYES, CAT_EYES_BLINK, CAT_EYES_STAY_OPEN);
+        (anim == CAT_EYES_IDLE) && blinkTimer > 3) {
+        fireSingleAnimation(CAT_ALL_BLINK, CAT_ALL_IDLE);
         if (rand() % 100 < 10) {
             blinkTimer -= 1.0f; // shorter time to next blink
         } else {
             blinkTimer = 0.0f; // reset timer
         }
     }
-    if (const auto anim = hairSprite->getCurrentAnimation(); rand() % 1000 < 5 && anim == CAT_HAIR_IDLE) {
-        int random = rand() % 2;
-        switch (random) {
-            case 0:
-                fireSingleAnimation(LAYER_HAIR, CAT_HAIR_TWITCH_EAR, CAT_HAIR_IDLE);
-                break;
-            case 1:
-                fireSingleAnimation(LAYER_HAIR, CAT_HAIR_WAG, CAT_HAIR_IDLE);
-                break;
-        }
+    if (const auto anim = eyesSprite->getCurrentAnimation();
+        (anim == CAT_EYES_IDLE) && sleepTimer > 15) {
+        fireSingleAnimation(CAT_ALL_SLEEP_IN, CAT_ALL_SLEEP_LOOP);
     }
-    if (const auto anim = faceSprite->getCurrentAnimation(); rand() % 1000 < 5 && anim == CAT_FACE_SMILE) {
-        fireSingleAnimation(LAYER_FACE, CAT_FACE_BLEW, CAT_FACE_SMILE);
+    if (const auto anim = eyesSprite->getCurrentAnimation();
+        (anim == CAT_EYES_SLEEP_LOOP) && sleepTimer > 25) {
+        fireSingleAnimation(CAT_ALL_SLEEP_OUT, CAT_ALL_IDLE);
+        sleepTimer = 0.0f;
+        blinkTimer = 0.0f;
     }
 }
 
@@ -86,7 +86,7 @@ void CatAnimationManager::initializeSprite(Sprite *&sprite, const int animationI
         screenArea,
         screenSize,
         screenScale,
-        2.5f
+        1.25f
     );
 
     // Set the animation and FPS
@@ -117,18 +117,37 @@ void CatAnimationManager::initializeSprite(Sprite *&sprite, const int animationI
 }
 
 void CatAnimationManager::fireSingleAnimation(const CatSpriteLayers layer, const CatAnimation animationId,
-                                              const CatAnimation nextAnimationId) {
+                                              const CatAnimation nextAnimationId, const int fps) {
     Sprite *sprite = getSpriteByLayer(layer);
     sprite->setAnimation(animationId);
+    sprite->setFPS(fps);
     singleFireAnimations.push_back({layer, animationId, nextAnimationId});
+}
+
+void CatAnimationManager::fireSingleAnimation(const CatAllAnimation &animation,
+                                              const CatAllAnimation &nextAnimation) {
+    fireSingleAnimation(LAYER_EYES, animation.eyesAnimation, nextAnimation.eyesAnimation, animation.fps);
+    fireSingleAnimation(LAYER_FACE, animation.faceAnimation, nextAnimation.faceAnimation, animation.fps);
+    fireSingleAnimation(LAYER_HAIR, animation.hairAnimation, nextAnimation.hairAnimation, animation.fps);
+    fireSingleAnimation(LAYER_CLOTHES, animation.clothesAnimation, nextAnimation.clothesAnimation, animation.fps);
+}
+
+
+void CatAnimationManager::fireLoopAnimation(const CatSpriteLayers layer, const CatAnimation animationId, const int fps) {
+    Sprite *sprite = getSpriteByLayer(layer);
+    sprite->setAnimation(animationId);
+    sprite->setFPS(fps);
+}
+
+void CatAnimationManager::fireLoopAnimation(const CatAllAnimation &animation) {
+    fireLoopAnimation(LAYER_EYES, animation.eyesAnimation, animation.fps);
+    fireLoopAnimation(LAYER_FACE, animation.faceAnimation, animation.fps);
+    fireLoopAnimation(LAYER_HAIR, animation.hairAnimation, animation.fps);
+    fireLoopAnimation(LAYER_CLOTHES, animation.clothesAnimation, animation.fps);
 }
 
 bool CatAnimationManager::getShouldLoop(const Sprite *sprite) {
     switch (const auto anim = static_cast<CatAnimation>(sprite->getCurrentAnimation())) {
-        case CAT_EYES_OPEN:
-            return false;
-        case CAT_EYES_CLOSE:
-            return false;
         default:
             return true;
     }

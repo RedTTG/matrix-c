@@ -8,3 +8,4 @@ atlas_debug.png
 /assets/sprites/*.rgba
 /assets/sprites/include/*
 /assets/sprites/Cat/*.ase
+/assets/sprites/Cat/*.aseprite

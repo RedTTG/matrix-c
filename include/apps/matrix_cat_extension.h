@@ -18,7 +18,51 @@ enum CatSpriteLayers {
     LAYER_EYES,
     LAYER_FACE,
     LAYER_HAIR,
-    LAYER_CLOTHES
+    LAYER_CLOTHES,
+};
+
+struct CatAllAnimation {
+    CatAnimation eyesAnimation;
+    CatAnimation faceAnimation;
+    CatAnimation hairAnimation;
+    CatAnimation clothesAnimation;
+    int fps = 12;
+};
+
+static constexpr CatAllAnimation CAT_ALL_IDLE = {
+    CAT_EYES_IDLE,
+    CAT_FACE_IDLE,
+    CAT_HAIR_IDLE,
+    CAT_CLOTHES_IDLE
+};
+
+static constexpr CatAllAnimation CAT_ALL_SLEEP_LOOP = {
+    CAT_EYES_SLEEP_LOOP,
+    CAT_FACE_SLEEP_LOOP,
+    CAT_HAIR_SLEEP_LOOP,
+    CAT_CLOTHES_SLEEP_LOOP,
+    6
+};
+
+static constexpr CatAllAnimation CAT_ALL_SLEEP_IN = {
+    CAT_EYES_SLEEP_IN,
+    CAT_FACE_SLEEP_IN,
+    CAT_HAIR_SLEEP_IN,
+    CAT_CLOTHES_SLEEP_IN
+};
+
+static constexpr CatAllAnimation CAT_ALL_SLEEP_OUT = {
+    CAT_EYES_SLEEP_OUT,
+    CAT_FACE_SLEEP_OUT,
+    CAT_HAIR_SLEEP_OUT,
+    CAT_CLOTHES_SLEEP_OUT
+};
+
+static constexpr CatAllAnimation CAT_ALL_BLINK = {
+    CAT_EYES_BLINK,
+    CAT_FACE_BLINK,
+    CAT_HAIR_BLINK,
+    CAT_CLOTHES_BLINK
 };
 
 struct SingleFireAnimation {
@@ -33,13 +77,16 @@ public:
     ~CatAnimationManager() = default;
 
     void render(float deltaTime);
+    void logic(float deltaTime);
 
 private:
 
     Sprite * getSpriteByLayer(CatSpriteLayers layer) const;
     void initializeSprite(Sprite *&sprite, int animationId);
-    void fireSingleAnimation(CatSpriteLayers layer, CatAnimation animationId, CatAnimation nextAnimationId);
-
+    void fireSingleAnimation(CatSpriteLayers layer, CatAnimation animationId, CatAnimation nextAnimationId, int fps = 12);
+    void fireSingleAnimation(const CatAllAnimation &animation, const CatAllAnimation &nextAnimation);
+    void fireLoopAnimation(CatSpriteLayers layer, CatAnimation animationId, int fps = 12);
+    void fireLoopAnimation(const CatAllAnimation &animation);
     static bool getShouldLoop(const Sprite *sprite);
 
     // Sprites
@@ -61,6 +108,7 @@ private:
 
     // Timers
     float blinkTimer = 0.0f;
+    float sleepTimer = 0.0f;
 
     // Track single-fire animations
     std::vector<SingleFireAnimation> singleFireAnimations;
