@@ -72,6 +72,7 @@ embed_resource("assets/shaders/fragment/blur_fragment_shader.frag" "generated/bl
 embed_resource("assets/fonts/matrix_font.raw" "generated/matrix_font.h" "matrixFont")
 
 embed_resource("assets/sprites/Cat.rgba" "generated/cat_atlas_texture.h" "catAtlasTexture")
+embed_resource("assets/sprites/HeadpatCursor.rgba" "generated/headpat_cursor_atlas_texture.h" "headpatCursorAtlasTexture")
 embed_resource("assets/sprites/Letters.rgba" "generated/letter_atlas_texture.h" "letterAtlasTexture")
 embed_resource("assets/sprites/UI.rgba" "generated/ui_atlas_texture.h" "uiAtlasTexture")
 

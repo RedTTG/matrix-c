@@ -86,6 +86,10 @@ public:
         setCenterY(y);
     }
 
+    // Get sprite positions on screen
+    int getTop() const { return screenArea.y + rect.y; }
+    int getLeft() const { return screenArea.x + rect.x; }
+
     // States
     void saveState(const std::string &name);
     void loadState(const std::string &name);

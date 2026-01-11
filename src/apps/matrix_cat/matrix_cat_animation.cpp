@@ -1,5 +1,7 @@
 #include "apps/matrix_cat_extension.h"
 #include "cat_atlas_texture.h"
+#include "headpat_cursor_atlas_texture.h"
+#include "../../../assets/sprites/include/headpatCursorFrameInfo.h"
 
 CatAnimationManager::CatAnimationManager(CatData &catData, float screenScale, Rect screenSize) : catData(catData),
     screenArea(catData.screenArea),
@@ -9,6 +11,14 @@ CatAnimationManager::CatAnimationManager(CatData &catData, float screenScale, Re
     initializeSprite(faceSprite, CAT_FACE_IDLE);
     initializeSprite(hairSprite, CAT_HAIR_IDLE);
     initializeSprite(clothesSprite, CAT_CLOTHES_IDLE);
+    headpatCursor = new Sprite(
+        headpatCursorFrames,
+        {0, 0, screenSize.w, screenSize.h},
+        screenSize,
+        screenScale,
+        1.5f
+    );
+    headpatCursor->loadTexture(headpatCursorAtlasTexture, headpatCursorAtlasTextureSize);
 }
 
 void CatAnimationManager::render(const float deltaTime) {
@@ -36,12 +46,33 @@ void CatAnimationManager::render(const float deltaTime) {
     faceSprite->render();
     hairSprite->render();
     eyesSprite->render();
+    if (headpatCursorActive) {
+        headpatCursor->render();
+    }
 }
 
-void CatAnimationManager::logic(const float deltaTime) {
+void CatAnimationManager::logic(const float deltaTime, const groupedEvents &events) {
     // Increment timers
     blinkTimer += deltaTime;
     sleepTimer += deltaTime;
+
+    // Cursor logic
+    if (events.mouseX >= eyesSprite->getLeft() && events.mouseY >= eyesSprite->getTop() && (
+            eyesSprite->getCurrentAnimation() == CAT_EYES_IDLE || eyesSprite->getCurrentAnimation() == CAT_EYES_BLINK
+        )) {
+        headpatCursor->rect.x = events.mouseX - 16 * screenScale;
+        headpatCursor->rect.y = events.mouseY - 16 * screenScale;
+        // headpatCursor->setCenterX(events.mouseX);
+        // headpatCursor->setCenterY(events.mouseY);
+        if (events.mouseLeft) {
+            fireSingleAnimation(CAT_ALL_HEADPAT, CAT_ALL_IDLE);
+            headpatCursorActive = false;
+        } else {
+            headpatCursorActive = true;
+        }
+    } else {
+        headpatCursorActive = false;
+    }
 
     // Check for random events
     if (const auto anim = eyesSprite->getCurrentAnimation();
@@ -133,7 +164,8 @@ void CatAnimationManager::fireSingleAnimation(const CatAllAnimation &animation,
 }
 
 
-void CatAnimationManager::fireLoopAnimation(const CatSpriteLayers layer, const CatAnimation animationId, const int fps) {
+void CatAnimationManager::fireLoopAnimation(const CatSpriteLayers layer, const CatAnimation animationId,
+                                            const int fps) {
     Sprite *sprite = getSpriteByLayer(layer);
     sprite->setAnimation(animationId);
     sprite->setFPS(fps);

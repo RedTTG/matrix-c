@@ -6,6 +6,7 @@
 #include <sys/types.h>
 
 #include "../../../assets/sprites/include/catAnimationsInfo.h"
+#include "../../../assets/sprites/include/headpatCursorFrameInfo.h"
 
 #include "helper.h"
 #include "sprite.h"
@@ -64,6 +65,12 @@ static constexpr CatAllAnimation CAT_ALL_BLINK = {
     CAT_HAIR_BLINK,
     CAT_CLOTHES_BLINK
 };
+static constexpr CatAllAnimation CAT_ALL_HEADPAT = {
+    CAT_EYES_HEADPAT,
+    CAT_FACE_HEADPAT,
+    CAT_HAIR_HEADPAT,
+    CAT_CLOTHES_HEADPAT
+};
 
 struct SingleFireAnimation {
     CatSpriteLayers layer;
@@ -77,7 +84,7 @@ public:
     ~CatAnimationManager() = default;
 
     void render(float deltaTime);
-    void logic(float deltaTime);
+    void logic(float deltaTime, const groupedEvents &events);
 
 private:
 
@@ -94,6 +101,7 @@ private:
     Sprite *faceSprite = nullptr;
     Sprite *hairSprite = nullptr;
     Sprite *clothesSprite = nullptr;
+    Sprite *headpatCursor = nullptr;
 
     // Reused info between sprites
     GLuint textureID = 0;
@@ -109,6 +117,9 @@ private:
     // Timers
     float blinkTimer = 0.0f;
     float sleepTimer = 0.0f;
+
+    // Cursor state
+    bool headpatCursorActive = false;
 
     // Track single-fire animations
     std::vector<SingleFireAnimation> singleFireAnimations;

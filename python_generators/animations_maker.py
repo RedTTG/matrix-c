@@ -19,6 +19,15 @@ ATLAS_LIST = [
         "sy": 128,
     },
     {
+        "file": "HeadpatCursor",
+        "save": "headpatCursorFrameInfo.h",
+        "name_upper": "HEADPAT_CURSOR_FRAMES",
+        "animations_name": "headpatCursorFrames",
+        "texture_size_name": "headpatCursorAtlasTextureSize",
+        "sx": 32,
+        "sy": 32,
+    },
+    {
         "file": "Letters",
         "save": "letterAnimationsInfo.h",
         "name_upper": "LETTER_ANIMATIONS",
