@@ -1,4 +1,4 @@
-package com.redttg.matrix
+package com.redttg.com
 
 import android.content.Context
 import android.opengl.GLSurfaceView

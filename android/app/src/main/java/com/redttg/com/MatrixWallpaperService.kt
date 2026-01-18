@@ -1,4 +1,4 @@
-package com.redttg.matrix
+package com.redttg.com
 
 import android.opengl.GLSurfaceView
 import android.service.wallpaper.WallpaperService

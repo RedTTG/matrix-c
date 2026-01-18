@@ -8,7 +8,7 @@
 }
 
 # Keep JNI methods in MatrixWallpaperService
--keep class com.redttg.matrix.MatrixWallpaperService {
+-keep class com.redttg.com.MatrixWallpaperService {
     native <methods>;
 }
 
@@ -17,7 +17,7 @@
 -keep class android.opengl.** { *; }
 
 # Keep wallpaper service
--keep class com.redttg.matrix.GLWallpaperSurfaceView { *; }
+-keep class com.redttg.com.GLWallpaperSurfaceView { *; }
 
 # Standard Android rules
 -keepattributes *Annotation*
