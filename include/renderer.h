@@ -4,21 +4,23 @@
 #include <clock.h>
 #include <options.h>
 #include <events.h>
-#include "glad.h"
-#include <GL/gl.h>
-#include <GLFW/glfw3.h>
 #include <iostream>
 #include <shader.h>
-#if defined(__linux__) && !defined(__ANDROID__)
-#include <X11/Xlib.h>
-#include <X11/extensions/Xrender.h>
-#include <GL/glx.h>
-#endif
 
 #ifdef __ANDROID__
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <android/native_window.h>
+#else
+#include "glad.h"
+#include <GL/gl.h>
+#include <GLFW/glfw3.h>
+#endif
+
+#if defined(__linux__) && !defined(__ANDROID__)
+#include <X11/Xlib.h>
+#include <X11/extensions/Xrender.h>
+#include <GL/glx.h>
 #endif
 
 
