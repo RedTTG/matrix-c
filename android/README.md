@@ -23,6 +23,7 @@ This document describes how to build the Matrix Rain live wallpaper for Android.
 
 ### Using Command Line
 
+**Debug Build:**
 ```bash
 cd android
 ./gradlew assembleDebug
@@ -30,12 +31,177 @@ cd android
 
 The APK will be generated in `android/app/build/outputs/apk/debug/`
 
+**Release Build:**
+```bash
+cd android
+./gradlew assembleRelease
+```
+
+The APK will be generated in `android/app/build/outputs/apk/release/`
+
 ### Installing the Wallpaper
 
 1. After installation, go to device Settings
 2. Navigate to Display → Wallpaper (location may vary by device)
 3. Select "Matrix Rain" from the live wallpapers list
 4. Preview and set as wallpaper
+
+## Building for Production
+
+### Creating a Keystore
+
+Before releasing your app, you need to sign it with a release keystore:
+
+1. **Generate a keystore** (only needed once):
+```bash
+keytool -genkey -v -keystore matrix-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias matrix-key
+```
+
+2. Follow the prompts to set:
+   - Keystore password
+   - Key password
+   - Your name and organization details
+
+3. **Store the keystore securely** - Keep `matrix-release-key.jks` in a safe location (NOT in the repository)
+
+### Configuring Signing
+
+Create `android/keystore.properties` (add to .gitignore):
+
+```properties
+storeFile=/path/to/matrix-release-key.jks
+storePassword=your_keystore_password
+keyAlias=matrix-key
+keyPassword=your_key_password
+```
+
+Update `android/app/build.gradle.kts` to use the keystore:
+
+```kotlin
+// Add at the top of the file
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    // ... existing config ...
+    
+    signingConfigs {
+        create("release") {
+            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
+            storePassword = keystoreProperties["storePassword"] as String?
+            keyAlias = keystoreProperties["keyAlias"] as String?
+            keyPassword = keystoreProperties["keyPassword"] as String?
+        }
+    }
+    
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+}
+```
+
+### Building Signed APK
+
+```bash
+cd android
+./gradlew assembleRelease
+```
+
+The signed APK will be in `android/app/build/outputs/apk/release/app-release.apk`
+
+### Building Android App Bundle (AAB) for Play Store
+
+Google Play requires AAB format for new apps:
+
+```bash
+cd android
+./gradlew bundleRelease
+```
+
+The AAB will be in `android/app/build/outputs/bundle/release/app-release.aab`
+
+### Publishing to Google Play Store
+
+1. **Create a Google Play Developer account** ($25 one-time fee)
+   - Visit https://play.google.com/console
+
+2. **Create a new application**
+   - Click "Create app"
+   - Fill in app details (name, language, type, category)
+
+3. **Complete the store listing**
+   - App icon (512x512 PNG)
+   - Feature graphic (1024x500 PNG)
+   - Screenshots (at least 2, recommended 4-8)
+   - Short description (80 characters max)
+   - Full description (4000 characters max)
+
+4. **Set up content rating**
+   - Complete the questionnaire
+   - Get rating certificate
+
+5. **Set pricing and distribution**
+   - Free or paid
+   - Select countries
+   - Accept content guidelines
+
+6. **Upload the AAB**
+   - Go to "Production" → "Create new release"
+   - Upload `app-release.aab`
+   - Add release notes
+   - Review and rollout
+
+7. **App review process**
+   - Google will review your app (usually 1-7 days)
+   - Fix any issues flagged by the review team
+   - Once approved, app goes live
+
+### ProGuard Configuration
+
+For release builds, create `android/app/proguard-rules.pro`:
+
+```proguard
+# Keep native methods
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# Keep JNI methods in MatrixWallpaperService
+-keep class com.redttg.matrix.MatrixWallpaperService {
+    native <methods>;
+}
+
+# Keep OpenGL classes
+-keep class javax.microedition.khronos.** { *; }
+-keep class android.opengl.** { *; }
+```
+
+### Version Management
+
+Update version in `android/app/build.gradle.kts` before each release:
+
+```kotlin
+defaultConfig {
+    versionCode = 2  // Increment for each release
+    versionName = "1.1"  // User-facing version
+}
+```
+
+**Important notes:**
+- `versionCode` must be incremented for every update
+- `versionName` is what users see (can be any string)
+- Keep your keystore and passwords secure
+- Back up your keystore - losing it means you can't update your app
 
 ## Architecture Overview
 

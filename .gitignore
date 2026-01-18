@@ -8,6 +8,8 @@ atlas_debug.png
 /android/build
 /android/local.properties
 /android/.cxx
+/android/keystore.properties
 *.apk
 *.aab
+*.jks
 /build
