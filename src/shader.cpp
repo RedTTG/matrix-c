@@ -4,6 +4,27 @@
 #include <iostream>
 #include <vector>
 
+// Helper function to convert OpenGL shaders to OpenGL ES compatible version
+std::string convertShaderForES(const std::string& source) {
+#ifdef __ANDROID__
+    std::string result = source;
+    
+    // Replace #version 330 core with #version 300 es
+    size_t versionPos = result.find("#version 330 core");
+    if (versionPos != std::string::npos) {
+        result.replace(versionPos, 17, "#version 300 es");
+        
+        // Add precision qualifiers after version directive
+        size_t insertPos = versionPos + 15; // After "#version 300 es"
+        result.insert(insertPos, "\nprecision mediump float;");
+    }
+    
+    return result;
+#else
+    return source;
+#endif
+}
+
 std::array<std::stringstream, 2> parseShader(const std::string *source) {
     std::istringstream stream(*source);
     std::string line;
@@ -79,15 +100,20 @@ void ShaderProgram::uniformBlockBinding(const GLuint blockIndex, const GLuint bl
 
 void ShaderProgram::loadShader(const unsigned char *source, const int length, const GLuint type) {
     const std::string src(reinterpret_cast<const char *>(source), length);
-    return loadShader(src.c_str(), type);
+    const std::string convertedSrc = convertShaderForES(src);
+    return loadShader(convertedSrc.c_str(), type);
 }
 
 void ShaderProgram::loadShader(const char *source, const GLuint type) {
+    // Convert shader for OpenGL ES if needed
+    const std::string convertedSource = convertShaderForES(std::string(source));
+    const char* finalSource = convertedSource.c_str();
+    
     // Create a new openGL shader
     const GLuint shader = glCreateShader(type);
 
     // Compile the shader from source
-    GL_CHECK(glShaderSource(shader, 1, &source, nullptr));
+    GL_CHECK(glShaderSource(shader, 1, &finalSource, nullptr));
     GL_CHECK(glCompileShader(shader));
 
     // Check for compilation errors
