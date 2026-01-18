@@ -1,5 +1,7 @@
 #include "renderer.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <fonts.h>
 #include <gl_errors.h>
@@ -22,6 +24,7 @@ auto glXCreateContextAttribsARB = reinterpret_cast<glXCreateContextAttribsARBPro
 
 #ifdef __ANDROID__
 #include "android_wallpaper.h"
+#include <android/log.h>
 #endif
 
 renderer *renderer::instance = nullptr;
@@ -132,7 +135,6 @@ void renderer::makeContext() {
 #elif defined(__ANDROID__)
         // Android EGL setup
         setupEGLForWallpaper(this, nativeWindow);
-        initializeGladES();
         GL_CHECK(glViewport(0, 0, opts->width, opts->height));
         androidEGL = true;
 
@@ -185,22 +187,59 @@ void renderer::makeContext() {
 }
 
 void renderer::makeFrameBuffers() {
-    // Create the framebuffers
-    createFrameBufferTexture(fboC, fboCTexture, GL_RGBA, true);
-    createFrameBufferTexture(fboM, fboMTexture, GL_RGBA, true);
-    createFrameBufferTexture(fboP, fboPTexture, GL_RGBA, true);
-    createFrameBufferTexture(fboCOutput, fboCTextureOutput, GL_RGBA, false);
-    createFrameBufferTexture(fboMOutput, fboMTextureOutput, GL_RGBA, false);
-    createFrameBufferTexture(fboPOutput, fboPTextureOutput, GL_RGBA, false);
+#ifdef __ANDROID__
+    __android_log_print(ANDROID_LOG_INFO, "Renderer", "Android: Skipping FBO creation - using direct rendering with built-in ghosting");
+
+    // On Android, we cannot create framebuffers due to hwuiTask conflicts
+    // Instead, render directly to screen (FBO 0) and implement ghosting differently:
+    // - Don't clear the screen completely each frame
+    // - Use glBlendFunc to create trailing effect
+
+    fboC = 0;
+    fboM = 0;
+    fboP = 0;
+    fboCOutput = 0;
+    fboMOutput = 0;
+    fboPOutput = 0;
+
+    fboCTexture = 0;
+    fboMTexture = 0;
+    fboPTexture = 0;
+    fboCTextureOutput = 0;
+    fboMTextureOutput = 0;
+    fboPTextureOutput = 0;
+
+    RBO = 0;
+
+    __android_log_print(ANDROID_LOG_INFO, "Renderer", "Android: Direct rendering setup complete");
+    return;
+#else
+    // Desktop uses multisampling
+    GLint maxSamples;
+    GL_CHECK(glGetIntegerv(GL_MAX_SAMPLES, &maxSamples));
+
+    if (antialiasSamples > maxSamples) {
+        std::cerr << "Requested " << antialiasSamples << " samples but GL supports max " << maxSamples << ", clamping" << std::endl;
+        antialiasSamples = maxSamples;
+    }
+
+    createFrameBufferTexture(fboC, fboCTexture, GL_RGBA8, true);
+    createFrameBufferTexture(fboM, fboMTexture, GL_RGBA8, true);
+    createFrameBufferTexture(fboP, fboPTexture, GL_RGBA8, true);
+
+    createFrameBufferTexture(fboCOutput, fboCTextureOutput, GL_RGBA8, false);
+    createFrameBufferTexture(fboMOutput, fboMTextureOutput, GL_RGBA8, false);
+    createFrameBufferTexture(fboPOutput, fboPTextureOutput, GL_RGBA8, false);
 
     GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
-    // Create renderbuffer
+    // Create renderbuffer for depth/stencil
     GL_CHECK(glGenRenderbuffers(1, &RBO));
     GL_CHECK(glBindRenderbuffer(GL_RENDERBUFFER, RBO));
     GL_CHECK(
         glRenderbufferStorageMultisample(GL_RENDERBUFFER, antialiasSamples, GL_DEPTH24_STENCIL8, opts->width, opts->
             height));
+
     GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, fboC));
     GL_CHECK(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO));
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -210,21 +249,51 @@ void renderer::makeFrameBuffers() {
 
     // Unbind the framebuffer
     GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+#endif
 }
 
 void renderer::createFrameBufferTexture(GLuint &fbo, GLuint &fboTexture, const GLuint format,
                                         const bool multiSampled) const {
-    GL_CHECK(glCreateFramebuffers(1, &fbo));
+    GL_CHECK(glGenFramebuffers(1, &fbo));
     GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, fbo));
 
     if (multiSampled) {
+#ifdef __ANDROID__
+        // OpenGL ES 3.0: Use renderbuffer for multisampling instead of multisampled textures
+        GL_CHECK(glGenRenderbuffers(1, &fboTexture));
+        GL_CHECK(glBindRenderbuffer(GL_RENDERBUFFER, fboTexture));
+        GL_CHECK(glRenderbufferStorageMultisample(GL_RENDERBUFFER, antialiasSamples, format, opts->width, opts->height));
+        GL_CHECK(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fboTexture));
+
+        // Verify framebuffer is complete
+        GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (status != GL_FRAMEBUFFER_COMPLETE) {
+            __android_log_print(ANDROID_LOG_ERROR, "Renderer",
+                "Multisampled framebuffer incomplete: fbo=%u, status=0x%x, samples=%d, format=0x%x, size=%ldx%ld",
+                fbo, status, antialiasSamples, format, opts->width, opts->height);
+
+            // Try to get more info about what's wrong
+            if (status == 0x8CD7) {
+                __android_log_print(ANDROID_LOG_ERROR, "Renderer",
+                    "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE: Sample counts don't match or dimensions differ");
+            }
+        } else {
+            static int logCount = 0;
+            if (logCount < 3) {
+                __android_log_print(ANDROID_LOG_INFO, "Renderer", "Created multisampled renderbuffer: fbo=%u, rb=%u, samples=%d",
+                    fbo, fboTexture, antialiasSamples);
+                logCount++;
+            }
+        }
+#else
+        // Desktop OpenGL: Use multisampled textures
         GL_CHECK(glGenTextures(1, &fboTexture));
         GL_CHECK(glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, fboTexture));
         GL_CHECK(
             glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, antialiasSamples, format, opts->width, opts->height,
                 GL_TRUE));
-        GL_CHECK(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, fboTexture, 0))
-        ;
+        GL_CHECK(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, fboTexture, 0));
+#endif
     } else {
         GL_CHECK(glGenTextures(1, &fboTexture));
         GL_CHECK(glBindTexture(GL_TEXTURE_2D, fboTexture));
@@ -244,6 +313,49 @@ void renderer::createFrameBufferTexture(GLuint &fbo, GLuint &fboTexture, const G
 }
 
 void renderer::initializePP() {
+#ifdef __ANDROID__
+    __android_log_print(ANDROID_LOG_INFO, "Renderer", "Android: Setting up fade-based ghosting (no FBOs)");
+
+    // Create a simple quad for drawing fade overlay
+    GL_CHECK(glGenVertexArrays(1, &ppFullQuadArray));
+    GL_CHECK(glBindVertexArray(ppFullQuadArray));
+
+    GL_CHECK(glGenBuffers(1, &ppFullQuadBuffer));
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, ppFullQuadBuffer));
+    GL_CHECK(glBufferData(GL_ARRAY_BUFFER, sizeof(ppFullQuadBufferData), ppFullQuadBufferData, GL_STATIC_DRAW));
+
+    GL_CHECK(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), nullptr));
+    GL_CHECK(glEnableVertexAttribArray(0));
+
+    // Create a simple shader program for drawing solid color quad
+    const char* fadeVertexShader = R"(
+        #version 300 es
+        layout(location = 0) in vec2 position;
+        void main() {
+            gl_Position = vec4(position, 0.0, 1.0);
+        }
+    )";
+
+    const char* fadeFragmentShader = R"(
+        #version 300 es
+        precision mediump float;
+        uniform float u_alpha;
+        out vec4 fragColor;
+        void main() {
+            fragColor = vec4(0.0, 0.0, 0.0, u_alpha);
+        }
+    )";
+
+    ppFinalProgram = new ShaderProgram();
+    ppFinalProgram->loadShader(fadeVertexShader, GL_VERTEX_SHADER);
+    ppFinalProgram->loadShader(fadeFragmentShader, GL_FRAGMENT_SHADER);
+    ppFinalProgram->linkProgram();
+
+    __android_log_print(ANDROID_LOG_INFO, "Renderer", "Android: Fade shader ready");
+    return;
+#endif
+
+    // Desktop: Full post-processing setup
     // Create VAO for full-screen quad
     GL_CHECK(glGenVertexArrays(1, &ppFullQuadArray));
     GL_CHECK(glBindVertexArray(ppFullQuadArray));
@@ -397,11 +509,53 @@ void renderer::destroyApp() const {
 void renderer::frameBegin() const {
     clock->calculateDeltaTime();
     GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, fboC));
+
+#ifdef __ANDROID__
+    // Implement ghosting on Android using fade overlay
+    if (opts->postProcessingOptions & GHOSTING) {
+        static bool firstFrame = true;
+
+        // Only clear the very first frame
+        if (firstFrame) {
+            __android_log_print(ANDROID_LOG_INFO, "Renderer", "Ghosting: First frame - clearing to black");
+            clear();
+            firstFrame = false;
+            return;
+        }
+
+        // Draw a fade overlay to darken the previous frame
+        // More aggressive fade for more visible trails
+        float fadeAlpha = 0.08f; // 8% fade per frame = 92% retention
+
+        GL_CHECK(glDisable(GL_DEPTH_TEST));
+        GL_CHECK(glDisable(GL_CULL_FACE));
+        GL_CHECK(glEnable(GL_BLEND));
+        GL_CHECK(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+
+        ppFinalProgram->useProgram();
+        GL_CHECK(glUniform1f(ppFinalProgram->getUniformLocation("u_alpha"), fadeAlpha));
+        GL_CHECK(glBindVertexArray(ppFullQuadArray));
+        GL_CHECK(glDrawArrays(GL_TRIANGLES, 0, 6));
+
+        static int logCount = 0;
+        if (logCount < 3) {
+            __android_log_print(ANDROID_LOG_INFO, "Renderer", "Ghosting: Drew fade quad with alpha=%.3f", fadeAlpha);
+            logCount++;
+        }
+
+        // CRITICAL: Restore the blend mode that matrix app expects
+        // This prevents flicker by ensuring consistent blending
+        GL_CHECK(glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
+
+        return;
+    }
+#endif
+
     clear();
 }
 
 void renderer::clear() {
-    GL_CHECK(glClearColor(0.0f, 0.0f, 0.0f, 0.0f));
+    GL_CHECK(glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
     GL_CHECK(glClear(GL_COLOR_BUFFER_BIT));
 }
 
@@ -442,11 +596,23 @@ void renderer::_swapPPBuffersPM() {
 }
 
 void renderer::_resolveMultisampledFramebuffer(const GLuint srcFbo, const GLuint dstFbo) const {
+#ifdef __ANDROID__
+    // On Android without multisampling, only blit if different
+    if (srcFbo != dstFbo) {
+        GL_CHECK(glBindFramebuffer(GL_READ_FRAMEBUFFER, srcFbo));
+        GL_CHECK(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dstFbo));
+        GL_CHECK(
+            glBlitFramebuffer(0, 0, opts->width, opts->height, 0, 0, opts->width, opts->height, GL_COLOR_BUFFER_BIT,
+                GL_NEAREST));
+    }
+#else
+    // Desktop with multisampling - always blit to resolve
     GL_CHECK(glBindFramebuffer(GL_READ_FRAMEBUFFER, srcFbo));
     GL_CHECK(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dstFbo));
     GL_CHECK(
         glBlitFramebuffer(0, 0, opts->width, opts->height, 0, 0, opts->width, opts->height, GL_COLOR_BUFFER_BIT,
             GL_NEAREST));
+#endif
 }
 
 void renderer::_sampleFrameBuffersForPostProcessing() const {
@@ -455,18 +621,40 @@ void renderer::_sampleFrameBuffersForPostProcessing() const {
 }
 
 void renderer::frameEnd() {
+#ifdef __ANDROID__
+    // On Android, ghosting is handled in frameBegin by fading with glClear opacity
+    // No FBO-based post-processing needed here
+    return;
+#endif
+
+    // Desktop: Full post-processing with framebuffers
     // Handle post-processing
     if (opts->postProcessingOptions & GHOSTING) {
+#ifdef __ANDROID__
+        static int ppLogCount = 0;
+        if (ppLogCount < 3) {
+            __android_log_print(ANDROID_LOG_INFO, "Renderer", "Frame %d ghosting enabled", ppLogCount);
+            ppLogCount++;
+        }
+#endif
         _sampleFrameBuffersForPostProcessing();
+
         GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, fboM));
-        clear();
+        clear();  // Clear destination framebuffer before rendering ghosting blend into it
         ppGhostingProgram->useProgram();
 
         GL_CHECK(glUniform1i(ppGhostingProgram->getUniformLocation("u_textureC"), 0));
         GL_CHECK(glUniform1i(ppGhostingProgram->getUniformLocation("u_textureP"), 1));
-        GL_CHECK(
-            glUniform1f(ppGhostingProgram->getUniformLocation("u_previousFrameOpacity"), opts->
-                ghostingPreviousFrameOpacity));
+
+        // Calculate framerate-independent opacity
+        // ghostingPreviousFrameOpacity is the base opacity at 60 FPS (e.g., 0.97 = 97% retention per frame)
+        // Scale it based on actual frame time to maintain consistent visual decay rate
+        float targetFPS = 60.0f;
+        float frameTimeRatio = (clock->deltaTime * targetFPS);
+        // Use power function to maintain exponential decay rate across different framerates
+        float frameOpacity = pow(opts->ghostingPreviousFrameOpacity, frameTimeRatio);
+
+        GL_CHECK(glUniform1f(ppGhostingProgram->getUniformLocation("u_previousFrameOpacity"), frameOpacity));
         GL_CHECK(glBindVertexArray(ppFullQuadArray));
 
         // Bind the framebuffer textures
@@ -515,9 +703,32 @@ void renderer::frameEnd() {
         _swapPPBuffersCM();
     }
 
-    _resolveMultisampledFramebuffer(fboC, fboCOutput);
+    // After post-processing and swaps, fboC contains the final result
+    // Make sure fboCOutput (and thus fboCTextureOutput) has the latest content
+    // On Android without multisampling, this is just a blit
+    if (opts->postProcessingOptions & (GHOSTING | BLUR)) {
+        _resolveMultisampledFramebuffer(fboC, fboCOutput);
+#ifdef __ANDROID__
+        static int resolveLogCount = 0;
+        if (resolveLogCount < 3) {
+            __android_log_print(ANDROID_LOG_INFO, "Renderer", "Resolved after PP: fboC=%u -> fboCOutput=%u (texture=%u)",
+                fboC, fboCOutput, fboCTextureOutput);
+            resolveLogCount++;
+        }
+#endif
+    }
+
     GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-    clear();;
+
+#ifdef __ANDROID__
+    static int finalLogCount = 0;
+    if (finalLogCount < 3) {
+        __android_log_print(ANDROID_LOG_INFO, "Renderer", "Rendering to screen: fboCTextureOutput=%u", fboCTextureOutput);
+        finalLogCount++;
+    }
+#endif
+
+    // Don't clear here - we want to draw the post-processed result!
     ppFinalProgram->useProgram();
     GL_CHECK(glBindVertexArray(ppFullQuadArray));
 
@@ -529,6 +740,14 @@ void renderer::frameEnd() {
 
     // Swap the framebuffers
     if (clock->frameSwapDeltaTime >= opts->swapTime) {
+#ifdef __ANDROID__
+        static int swapCount = 0;
+        if (swapCount < 3) {
+            __android_log_print(ANDROID_LOG_INFO, "Renderer", "Framebuffer swap %d: swapDeltaTime=%.4f, swapTime=%.4f",
+                swapCount, clock->frameSwapDeltaTime, opts->swapTime);
+            swapCount++;
+        }
+#endif
         GLuint temp = fboPTexture;
         fboPTexture = fboCTexture;
         fboCTexture = temp;

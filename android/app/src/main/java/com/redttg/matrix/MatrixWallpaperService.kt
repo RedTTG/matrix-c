@@ -1,11 +1,9 @@
 package com.redttg.matrix
 
-import android.opengl.GLSurfaceView
 import android.service.wallpaper.WallpaperService
+import android.util.Log
 import android.view.MotionEvent
 import android.view.SurfaceHolder
-import javax.microedition.khronos.egl.EGLConfig
-import javax.microedition.khronos.opengles.GL10
 
 class MatrixWallpaperService : WallpaperService() {
     
@@ -15,28 +13,69 @@ class MatrixWallpaperService : WallpaperService() {
     
     inner class MatrixEngine : Engine() {
         
-        private var glSurfaceView: GLWallpaperSurfaceView? = null
-        private var renderer: MatrixRenderer? = null
-        
+        private var renderThread: RenderThread? = null
+        private var isVisible = false
+
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
-            
-            glSurfaceView = GLWallpaperSurfaceView(this@MatrixWallpaperService).apply {
-                setEngine(this@MatrixEngine)
-                setEGLContextClientVersion(3)
-                renderer = MatrixRenderer(surfaceHolder)
-                setRenderer(renderer)
-                renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
-            }
+            Log.i(TAG, "Engine onCreate")
+
+            // Disable touch events and offset notifications since we don't need them
+            setTouchEventsEnabled(false)
+            setOffsetNotificationsEnabled(false)
+
+            // Set surface format for OpenGL ES
+            surfaceHolder.setFormat(android.graphics.PixelFormat.RGBA_8888)
         }
-        
+
+        override fun onSurfaceCreated(holder: SurfaceHolder) {
+            super.onSurfaceCreated(holder)
+            Log.i(TAG, "Surface created")
+
+            // Ensure format is set
+            holder.setFormat(android.graphics.PixelFormat.RGBA_8888)
+        }
+
+        override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+            super.onSurfaceChanged(holder, format, width, height)
+            Log.i(TAG, "Surface changed: ${width}x${height}")
+
+            // Stop existing render thread if any
+            renderThread?.stopRendering()
+            renderThread = null
+
+            // CRITICAL: Give Android's hardware renderer (hwuiTask) time to fully release the surface
+            // The hwuiTask runs asynchronously and may still be accessing the surface
+            Log.i(TAG, "Waiting for hardware renderer to release surface...")
+            Thread.sleep(500)
+
+            // Start new render thread with the surface
+            renderThread = RenderThread(holder, width, height)
+            renderThread?.start()
+
+            // Always start rendering when surface is created - wallpaper should animate on home screen
+            renderThread?.resumeRendering()
+        }
+
+        override fun onSurfaceDestroyed(holder: SurfaceHolder) {
+            super.onSurfaceDestroyed(holder)
+            Log.i(TAG, "Surface destroyed")
+
+            renderThread?.stopRendering()
+            renderThread = null
+        }
+
         override fun onVisibilityChanged(visible: Boolean) {
             super.onVisibilityChanged(visible)
+            Log.i(TAG, "Visibility changed: $visible")
+            isVisible = visible
+
+            // Keep rendering active on home screen - only pause if explicitly invisible
+            // The visibility flag is unreliable for wallpapers, they should always animate
             if (visible) {
-                glSurfaceView?.onResume()
-            } else {
-                glSurfaceView?.onPause()
+                renderThread?.resumeRendering()
             }
+            // Don't pause when visibility is false - wallpaper should keep animating
         }
         
         override fun onTouchEvent(event: MotionEvent) {
@@ -50,26 +89,75 @@ class MatrixWallpaperService : WallpaperService() {
         
         override fun onDestroy() {
             super.onDestroy()
-            glSurfaceView?.onDestroy()
-            nativeDestroy()
+            Log.i(TAG, "Engine onDestroy")
+            renderThread?.stopRendering()
+            renderThread = null
         }
         
-        inner class MatrixRenderer(private val holder: SurfaceHolder) : GLSurfaceView.Renderer {
+        inner class RenderThread(
+            private val holder: SurfaceHolder,
+            private val width: Int,
+            private val height: Int
+        ) : Thread() {
+
+            @Volatile
+            private var running = false
+
+            @Volatile
+            private var rendering = false
+
             private var initialized = false
             
-            override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
-                // Surface created, but we'll init in onSurfaceChanged
-            }
-            
-            override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
-                if (!initialized) {
+            override fun run() {
+                Log.i(TAG, "Render thread started")
+                running = true
+
+                try {
+                    // Initialize native renderer
                     nativeInit(holder.surface, width, height)
                     initialized = true
+                    Log.i(TAG, "Native renderer initialized")
+
+                    // Rendering loop
+                    while (running) {
+                        if (rendering && initialized) {
+                            nativeRender()
+                        } else {
+                            // Sleep when not rendering to save battery
+                            sleep(100)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in render thread", e)
+                } finally {
+                    if (initialized) {
+                        nativeDestroy()
+                        initialized = false
+                    }
+                    Log.i(TAG, "Render thread stopped")
                 }
             }
-            
-            override fun onDrawFrame(gl: GL10) {
-                nativeRender()
+
+            fun resumeRendering() {
+                Log.i(TAG, "Resuming rendering")
+                rendering = true
+            }
+
+            fun pauseRendering() {
+                Log.i(TAG, "Pausing rendering")
+                rendering = false
+            }
+
+            fun stopRendering() {
+                Log.i(TAG, "Stopping rendering")
+                running = false
+                rendering = false
+                interrupt()
+                try {
+                    join(1000)
+                } catch (e: InterruptedException) {
+                    Log.w(TAG, "Interrupted while waiting for render thread to stop")
+                }
             }
         }
     }
@@ -80,6 +168,8 @@ class MatrixWallpaperService : WallpaperService() {
     private external fun nativeTouchEvent(x: Float, y: Float, pressed: Boolean)
     
     companion object {
+        private const val TAG = "MatrixWallpaper"
+
         init {
             System.loadLibrary("matrix")
         }

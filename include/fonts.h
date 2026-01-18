@@ -8,7 +8,6 @@
 #endif
 
 #include <vector>
-#include <boost/mpl/int.hpp>
 
 struct CharacterInfo {
     unsigned int xOffset;

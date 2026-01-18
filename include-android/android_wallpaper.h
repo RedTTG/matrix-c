@@ -14,7 +14,6 @@ struct renderer;
 void setupEGLForWallpaper(renderer *rnd, ANativeWindow* window);
 void android_SwapBuffers(renderer *rnd);
 void destroyEGL(renderer *rnd);
-void initializeGladES();
 
 #endif // __ANDROID__
 

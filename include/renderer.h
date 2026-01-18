@@ -74,7 +74,9 @@ struct renderer {
     int antialiasSamples = 4;
     App *app = nullptr;
     tickRateClock *clock;
+#ifndef __ANDROID__
     GLFWwindow *glfwWindow = nullptr;
+#endif
 
     ShaderProgram *ppGhostingProgram{};
     ShaderProgram *ppBlurProgram{};

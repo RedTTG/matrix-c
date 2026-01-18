@@ -1,4 +1,5 @@
 #include "helper.h"
+#include <unistd.h>
 
 void createQuadVertexData(renderer *rnd, float quadWidth, float quadHeight, GLfloat *vertices) {
     // Calculate the normalized device coordinates (NDC) for the quad

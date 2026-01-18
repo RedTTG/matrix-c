@@ -6,6 +6,10 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <cmath>
 
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
+
 #include "helper.h"
 #include "matrix_font.h"
 #include "matrix_font_info.h"
@@ -14,13 +18,19 @@
 
 
 void MatrixApp::setup() {
+    // Enable post-processing with framerate-independent ghosting
     rnd->opts->postProcessingOptions |= GHOSTING;
-    rnd->opts->ghostingPreviousFrameOpacity = 0.997f;
+    rnd->opts->ghostingPreviousFrameOpacity = 0.97f; // Opacity at 60 FPS (97% retention = long trails)
     rnd->opts->ghostingBlurSize = 0.1f;
+
     // Handle font initialization
     atlas = createFontTextureAtlas(matrixFont, &matrixFontInfo);
 
+#ifdef __ANDROID__
+    int rainLimit = 500;  // Reduced for mobile performance
+#else
     int rainLimit = MATRIX_RAIN_LIMIT;
+#endif
 
 
     // Calculate character scale and mouse radius
@@ -70,6 +80,30 @@ void MatrixApp::setup() {
     GL_CHECK(glGenVertexArrays(1, &vertexArray));
     GL_CHECK(glBindVertexArray(vertexArray));
 
+#ifdef __ANDROID__
+    // On Android/OpenGL ES, we need actual vertex data for the quad
+    // Create a buffer for the quad vertices (4 vertices for TRIANGLE_FAN)
+    GLuint quadVertexBuffer;
+    float quadVertices[] = {
+        0.0f, 0.0f,  // Bottom-left
+        1.0f, 0.0f,  // Bottom-right
+        1.0f, 1.0f,  // Top-right
+        0.0f, 1.0f   // Top-left
+    };
+    GL_CHECK(glGenBuffers(1, &quadVertexBuffer));
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, quadVertexBuffer));
+    GL_CHECK(glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW));
+
+    // Attribute 3 for quad vertex positions (not instanced)
+    GL_CHECK(glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 0, nullptr));
+    GL_CHECK(glEnableVertexAttribArray(3));
+    GL_CHECK(glVertexAttribDivisor(3, 0)); // Not instanced - same for all instances
+
+    // Unbind quad buffer before setting up instance buffer
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, 0));
+#endif
+
+    // Instance data buffer
     GL_CHECK(glGenBuffers(1, &vertexBuffer));
     GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer));
     GL_CHECK(
@@ -107,6 +141,13 @@ void MatrixApp::setup() {
     GL_CHECK(glVertexAttribDivisor(0, 1));
     GL_CHECK(glVertexAttribDivisor(1, 1));
     GL_CHECK(glVertexAttribDivisor(2, 1));
+
+#ifdef __ANDROID__
+    // Re-bind the quad buffer to attribute 3 to ensure it's set correctly
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, quadVertexBuffer));
+    GL_CHECK(glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 0, nullptr));
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, 0));
+#endif
 
     // Initialize vertices
     for (int i = 0; i < rainData.capacity(); ++i) {
@@ -148,6 +189,24 @@ void MatrixApp::setup() {
 void MatrixApp::loop() {
     program->useProgram();
 
+#ifdef __ANDROID__
+    static int debugFrameCount = 0;
+    static bool loggedSetup = false;
+    if (!loggedSetup) {
+        // Log once to verify loop is being called
+        __android_log_print(ANDROID_LOG_INFO, "MatrixApp", "Matrix loop() called, capacity=%d", static_cast<int>(rainData.capacity()));
+
+        // Ensure proper GL state for rendering
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+        __android_log_print(ANDROID_LOG_INFO, "MatrixApp", "GL state configured");
+        loggedSetup = true;
+    }
+#endif
+
     // Bind glyph buffer and texture
     GL_CHECK(glActiveTexture(GL_TEXTURE0));
     GL_CHECK(glBindTexture(GL_TEXTURE_2D, atlas->glyphTexture));
@@ -174,7 +233,8 @@ void MatrixApp::loop() {
 
     const int reassignedRaindrop = amountOfReassignedRaindrops > 0 ? random_int(0, rainData.capacity() - 1) : -1;
 
-    int activeCursorPardons = 0;
+    // Update all rain drops every frame (essential for animation and ghosting trails)
+    activeCursorPardons = 0;
     for (int i = 0; i < rainData.capacity(); ++i) {
         incrementRain(i, i == reassignedRaindrop);
         if (rainData[i].cursorPardons > 0) {
@@ -187,7 +247,50 @@ void MatrixApp::loop() {
 
     // Render
     GL_CHECK(glBindVertexArray(vertexArray));
+
+#ifdef __ANDROID__
+    bool shouldLog = debugFrameCount < 3;
+    if (shouldLog) {
+        __android_log_print(ANDROID_LOG_INFO, "MatrixApp", "Frame %d: About to draw %d instances with vertexArray=%u",
+            debugFrameCount, static_cast<int>(rainData.capacity()), vertexArray);
+
+        // Log first few instance positions
+        __android_log_print(ANDROID_LOG_INFO, "MatrixApp", "Frame %d: Instance 0 pos=(%.1f, %.1f), Instance 1 pos=(%.1f, %.1f)",
+            debugFrameCount,
+            rainDrawData[0].x, rainDrawData[0].y,
+            rainDrawData[1].x, rainDrawData[1].y);
+
+        // Check if program is active
+        GLint currentProgram = 0;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+        __android_log_print(ANDROID_LOG_INFO, "MatrixApp", "Frame %d: Current program ID: %d",
+            debugFrameCount, currentProgram);
+
+        // Check VAO state
+        GLint vaoBinding = 0;
+        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vaoBinding);
+        __android_log_print(ANDROID_LOG_INFO, "MatrixApp", "Frame %d: VAO binding: %d", debugFrameCount, vaoBinding);
+
+        // Check if attribute arrays are enabled
+        GLint attr0Enabled = 0, attr1Enabled = 0, attr2Enabled = 0, attr3Enabled = 0;
+        glGetVertexAttribiv(0, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &attr0Enabled);
+        glGetVertexAttribiv(1, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &attr1Enabled);
+        glGetVertexAttribiv(2, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &attr2Enabled);
+        glGetVertexAttribiv(3, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &attr3Enabled);
+        __android_log_print(ANDROID_LOG_INFO, "MatrixApp", "Frame %d: Attrs enabled: 0=%d, 1=%d, 2=%d, 3=%d",
+            debugFrameCount, attr0Enabled, attr1Enabled, attr2Enabled, attr3Enabled);
+
+        debugFrameCount++;
+    }
+#endif
+
     GL_CHECK(glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, rainData.capacity()));
+
+#ifdef __ANDROID__
+    if (shouldLog) {
+        __android_log_print(ANDROID_LOG_INFO, "MatrixApp", "Frame %d: Draw call completed", debugFrameCount - 1);
+    }
+#endif
     // rnd->fboPTextureOutput = atlas->glyphTexture;
 }
 
@@ -270,6 +373,7 @@ void MatrixApp::incrementRain(const int index, const bool reassigned) {
         }
     }
 
+#ifndef __ANDROID__
     if (rainData[index].cursorPardons == 0 and distance < mouseRadius and random_int(0, 10) != 0) {
         // Push the raindrop away from the cursor
         const float force = (mouseRadius - distance) / mouseRadius;
@@ -280,7 +384,9 @@ void MatrixApp::incrementRain(const int index, const bool reassigned) {
         rainData[index].pushX += pushX;
         rainData[index].pushY += pushY;
         rainDrawData[index].y += pushY;
-    } else if (rainData[index].cursorPardons > 0) {
+    } else
+#endif
+    if (rainData[index].cursorPardons > 0) {
         // Expand from the cursor
         rainDrawData[index].x += rainData[index].pushX;
         rainDrawData[index].y += rainData[index].pushY;
