@@ -14,7 +14,7 @@
 static renderer* g_renderer = nullptr;
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_redttg_com_MatrixWallpaperService_nativeInit(
+Java_com_redttg_matrix_MatrixWallpaperService_nativeInit(
     JNIEnv* env, jobject obj, jobject surface, jint width, jint height) {
     
     LOGI("nativeInit called: %dx%d", width, height);
@@ -62,7 +62,7 @@ Java_com_redttg_com_MatrixWallpaperService_nativeInit(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_redttg_com_MatrixWallpaperService_nativeRender(JNIEnv* env, jobject obj) {
+Java_com_redttg_matrix_MatrixWallpaperService_nativeRender(JNIEnv* env, jobject obj) {
     if (g_renderer && !g_renderer->events->quit) {
         try {
             g_renderer->getEvents();
@@ -77,7 +77,7 @@ Java_com_redttg_com_MatrixWallpaperService_nativeRender(JNIEnv* env, jobject obj
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_redttg_com_MatrixWallpaperService_nativeDestroy(JNIEnv* env, jobject obj) {
+Java_com_redttg_matrix_MatrixWallpaperService_nativeDestroy(JNIEnv* env, jobject obj) {
     LOGI("nativeDestroy called");
     
     if (g_renderer) {
@@ -93,7 +93,7 @@ Java_com_redttg_com_MatrixWallpaperService_nativeDestroy(JNIEnv* env, jobject ob
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_redttg_com_MatrixWallpaperService_nativeTouchEvent(
+Java_com_redttg_matrix_MatrixWallpaperService_nativeTouchEvent(
     JNIEnv* env, jobject obj, jfloat x, jfloat y, jboolean pressed) {
     
     if (g_renderer && g_renderer->events) {

@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.redttg.com"
+    namespace = "com.redttg.matrix"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.redttg.com"
+        applicationId = "com.redttg.matrix"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
