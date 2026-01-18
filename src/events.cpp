@@ -76,6 +76,10 @@ void handleX11Events(const renderer *rnd) {
 #endif
 
 #ifdef __ANDROID__
+// Note: handleAndroidEvents is available for future use but not currently called.
+// Android touch events are handled directly via JNI callbacks in jni_bridge.cpp
+// which update the events structure synchronously. This function remains available
+// for potential AInputEvent processing in the future.
 void handleAndroidEvents(const renderer *rnd, AInputEvent* event) {
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
         int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;

@@ -9,13 +9,18 @@ std::string convertShaderForES(const std::string& source) {
 #ifdef __ANDROID__
     std::string result = source;
     
+    // Constants for version strings
+    const char* desktopVersion = "#version 330 core";
+    const char* esVersion = "#version 300 es";
+    const size_t desktopVersionLen = strlen(desktopVersion);
+    
     // Replace #version 330 core with #version 300 es
-    size_t versionPos = result.find("#version 330 core");
+    size_t versionPos = result.find(desktopVersion);
     if (versionPos != std::string::npos) {
-        result.replace(versionPos, 17, "#version 300 es");
+        result.replace(versionPos, desktopVersionLen, esVersion);
         
         // Add precision qualifiers after version directive
-        size_t insertPos = versionPos + 15; // After "#version 300 es"
+        size_t insertPos = versionPos + strlen(esVersion);
         result.insert(insertPos, "\nprecision mediump float;");
     }
     

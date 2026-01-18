@@ -89,7 +89,7 @@ void setupEGLForWallpaper(renderer *rnd, ANativeWindow* window) {
     // Get window dimensions
     rnd->opts->width = ANativeWindow_getWidth(window);
     rnd->opts->height = ANativeWindow_getHeight(window);
-    LOGI("Window dimensions: %ldx%ld", rnd->opts->width, rnd->opts->height);
+    LOGI("Window dimensions: %dx%d", static_cast<int>(rnd->opts->width), static_cast<int>(rnd->opts->height));
 }
 
 void android_SwapBuffers(renderer *rnd) {

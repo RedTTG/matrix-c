@@ -1,0 +1,40 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/matrix.dir/link.d"
+  "CMakeFiles/matrix.dir/src/apps.cpp.o"
+  "CMakeFiles/matrix.dir/src/apps.cpp.o.d"
+  "CMakeFiles/matrix.dir/src/apps/debug.cpp.o"
+  "CMakeFiles/matrix.dir/src/apps/debug.cpp.o.d"
+  "CMakeFiles/matrix.dir/src/apps/matrix.cpp.o"
+  "CMakeFiles/matrix.dir/src/apps/matrix.cpp.o.d"
+  "CMakeFiles/matrix.dir/src/apps/triangle.cpp.o"
+  "CMakeFiles/matrix.dir/src/apps/triangle.cpp.o.d"
+  "CMakeFiles/matrix.dir/src/clock.cpp.o"
+  "CMakeFiles/matrix.dir/src/clock.cpp.o.d"
+  "CMakeFiles/matrix.dir/src/events.cpp.o"
+  "CMakeFiles/matrix.dir/src/events.cpp.o.d"
+  "CMakeFiles/matrix.dir/src/fonts.cpp.o"
+  "CMakeFiles/matrix.dir/src/fonts.cpp.o.d"
+  "CMakeFiles/matrix.dir/src/gl_errors.cpp.o"
+  "CMakeFiles/matrix.dir/src/gl_errors.cpp.o.d"
+  "CMakeFiles/matrix.dir/src/glad.c.o"
+  "CMakeFiles/matrix.dir/src/glad.c.o.d"
+  "CMakeFiles/matrix.dir/src/helper.cpp.o"
+  "CMakeFiles/matrix.dir/src/helper.cpp.o.d"
+  "CMakeFiles/matrix.dir/src/main.cpp.o"
+  "CMakeFiles/matrix.dir/src/main.cpp.o.d"
+  "CMakeFiles/matrix.dir/src/options.cpp.o"
+  "CMakeFiles/matrix.dir/src/options.cpp.o.d"
+  "CMakeFiles/matrix.dir/src/renderer.cpp.o"
+  "CMakeFiles/matrix.dir/src/renderer.cpp.o.d"
+  "CMakeFiles/matrix.dir/src/shader.cpp.o"
+  "CMakeFiles/matrix.dir/src/shader.cpp.o.d"
+  "CMakeFiles/matrix.dir/src/x11.cpp.o"
+  "CMakeFiles/matrix.dir/src/x11.cpp.o.d"
+  "matrix"
+  "matrix.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang C CXX)
+  include(CMakeFiles/matrix.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

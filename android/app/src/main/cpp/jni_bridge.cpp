@@ -3,6 +3,7 @@
 #include <jni.h>
 #include <android/native_window_jni.h>
 #include <android/log.h>
+#include <cstring>
 #include "renderer.h"
 #include "options.h"
 
@@ -31,8 +32,16 @@ Java_com_redttg_matrix_MatrixWallpaperService_nativeInit(
     opts->width = width;
     opts->height = height;
     
-    // Set app to matrix
-    strcpy(opts->app, "matrix");
+    // Set app to matrix using safe string copy
+    const char* appName = "matrix";
+    size_t appNameLen = strlen(appName);
+    if (appNameLen < 256) {
+        memcpy(opts->app, appName, appNameLen + 1);
+    } else {
+        LOGE("App name too long");
+        delete opts;
+        return;
+    }
     
     // Enable ghosting post-processing
     opts->postProcessingOptions = GHOSTING;
