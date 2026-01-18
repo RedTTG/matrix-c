@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.10...4.2)
 project(matrix)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -14,10 +14,18 @@ endif()
 
 include(FetchContent)
 
+# Policy and compatibility settings to silence developer warnings:
+# - CMP0167: keep the legacy FindBoost behavior (avoid removal warning)
+# - CMP0072: prefer GLVND in FindOpenGL when available
+# These are conservative choices to avoid changing build behaviour while removing warnings.
+cmake_policy(SET CMP0167 OLD)
+cmake_policy(SET CMP0072 NEW)
+set(OpenGL_GL_PREFERENCE GLVND)
+
 FetchContent_Declare(
         glm
         GIT_REPOSITORY	https://github.com/g-truc/glm.git
-        GIT_TAG 	bf71a834948186f4097caa076cd2663c69a10e1e #refs/tags/1.0.1
+        GIT_TAG 	8d1fd52e5ab5590e2c81768ace50c72bae28f2ed #refs/tags/1.0.3
 )
 
 FetchContent_MakeAvailable(glm)
