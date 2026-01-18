@@ -4,12 +4,20 @@
 #include <clock.h>
 #include <options.h>
 #include <events.h>
+#include <iostream>
+#include <shader.h>
+
+#ifdef __ANDROID__
+#include <EGL/egl.h>
+#include <GLES3/gl3.h>
+#include <android/native_window.h>
+#else
 #include "glad.h"
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
-#include <iostream>
-#include <shader.h>
-#ifdef __linux__
+#endif
+
+#if defined(__linux__) && !defined(__ANDROID__)
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrender.h>
 #include <GL/glx.h>
@@ -19,7 +27,7 @@
 
 #define TITLE "Matrix rain"
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 typedef GLXContext (*glXCreateContextAttribsARBProc)(Display *, GLXFBConfig, GLXContext, Bool, const int *);
 #endif
 
@@ -36,7 +44,7 @@ static constexpr GLfloat ppFullQuadBufferData[] = {
 
 struct renderer {
     options *opts;
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
     Display *display = nullptr;
     Window desktop{};
     Window window{};
@@ -53,13 +61,22 @@ struct renderer {
     int xinputOptCode{};
     static void handleSignal(int signal);
     void setupSignalHandling();
+#elif defined(__ANDROID__)
+    EGLDisplay eglDisplay = EGL_NO_DISPLAY;
+    EGLContext eglContext = EGL_NO_CONTEXT;
+    EGLSurface eglSurface = EGL_NO_SURFACE;
+    EGLConfig eglConfig;
+    ANativeWindow* nativeWindow = nullptr;
+    bool androidEGL = false;
 #else
 
 #endif
     int antialiasSamples = 4;
     App *app = nullptr;
     tickRateClock *clock;
+#ifndef __ANDROID__
     GLFWwindow *glfwWindow = nullptr;
+#endif
 
     ShaderProgram *ppGhostingProgram{};
     ShaderProgram *ppBlurProgram{};

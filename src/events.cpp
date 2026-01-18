@@ -1,7 +1,10 @@
 #include "events.h"
-#include <unordered_set>
 
-#ifdef __linux__
+#if !defined(__ANDROID__)
+#include <unordered_set>
+#endif
+
+#if defined(__linux__) && !defined(__ANDROID__)
 void handleMousePress(groupedEvents *events, const int number, bool pressed) {
     switch (number) {
         case 1:
@@ -75,6 +78,31 @@ void handleX11Events(const renderer *rnd) {
 }
 #endif
 
+#ifdef __ANDROID__
+// Note: handleAndroidEvents is available for future use but not currently called.
+// Android touch events are handled directly via JNI callbacks in jni_bridge.cpp
+// which update the events structure synchronously. This function remains available
+// for potential AInputEvent processing in the future.
+void handleAndroidEvents(const renderer *rnd, AInputEvent* event) {
+    if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
+        int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
+        float x = AMotionEvent_getX(event, 0);
+        float y = AMotionEvent_getY(event, 0);
+        
+        rnd->events->mouseX = static_cast<long>(x);
+        rnd->events->mouseY = static_cast<long>(y);
+        
+        if (action == AMOTION_EVENT_ACTION_DOWN || action == AMOTION_EVENT_ACTION_MOVE) {
+            rnd->events->mouseLeft = true;
+            rnd->events->lastMouseMotion = rnd->clock->now();
+        } else if (action == AMOTION_EVENT_ACTION_UP) {
+            rnd->events->mouseLeft = false;
+        }
+    }
+}
+#endif
+
+#if !defined(__ANDROID__)
 void handleGLFWEvents(const renderer *rnd) {
     static std::unordered_set<int> pressedKeys;
     glfwPollEvents();
@@ -109,3 +137,4 @@ void handleGLFWEvents(const renderer *rnd) {
     }
     rnd->events->keysPressed = pressedKeys.size();
 }
+#endif

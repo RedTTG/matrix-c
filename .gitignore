@@ -3,3 +3,15 @@
 /.venv
 /generated
 atlas_debug.png
+/android/.gradle
+/android/app/build
+/android/build
+/android/local.properties
+/android/.cxx
+/android/keystore.properties
+*.apk
+*.aab
+*.jks
+/build
+/android/app/.cxx/
+/android/gradle

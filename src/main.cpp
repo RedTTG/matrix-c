@@ -6,7 +6,7 @@
 #include <options.h>
 #include <thread>
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 #include "x11.h"
 #endif
 

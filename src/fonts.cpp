@@ -27,8 +27,30 @@ FontAtlas *createFontTextureAtlas(const unsigned char *source, const FontInfo *f
     GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
     GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
 
+#ifdef __ANDROID__
+    // Set swizzle mask so single R channel is readable in shader
+    GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_RED));
+    GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED));
+    GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED));
+    GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED));
+#endif
+
     // Upload the atlas data to the texture
     GL_CHECK(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
+#ifdef __ANDROID__
+    // OpenGL ES 3.0 requires sized internal format
+    GL_CHECK(glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_R8,           // Sized internal format for ES
+        fontInfo->width,
+        fontInfo->height,
+        0,
+        GL_RED,          // Format of source data
+        GL_UNSIGNED_BYTE,
+        source
+    ));
+#else
     GL_CHECK(glTexImage2D(
         GL_TEXTURE_2D,
         0,
@@ -40,6 +62,7 @@ FontAtlas *createFontTextureAtlas(const unsigned char *source, const FontInfo *f
         GL_UNSIGNED_BYTE,
         source
     ));
+#endif
 
     // Unbind the texture
     GL_CHECK(glBindTexture(GL_TEXTURE_2D, 0));

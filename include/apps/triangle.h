@@ -2,7 +2,12 @@
 #define TRIANGLE_H
 #include <apps.h>
 #include <triangle_shader.h>
+
+#ifdef __ANDROID__
+#include <GLES3/gl3.h>
+#else
 #include "glad.h"
+#endif
 
 class TriangleApp final : public App {
 public:

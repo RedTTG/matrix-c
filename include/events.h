@@ -6,7 +6,7 @@ struct groupedEvents;
 #include <renderer.h>
 #include <iostream>
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 #include <X11/Xlib.h>
 #include <X11/extensions/XI2.h>
 #include <X11/extensions/XInput2.h>
@@ -14,13 +14,21 @@ struct groupedEvents;
 void handleX11Events(const renderer *rnd);
 #endif
 
+#ifdef __ANDROID__
+#include <android/input.h>
+
+void handleAndroidEvents(const renderer *rnd, AInputEvent* event);
+#endif
+
+#if !defined(__ANDROID__)
 void handleGLFWEvents(const renderer *rnd);
+#endif
 
 struct groupedEvents {
     bool quit;
     long mouseX, mouseY, keysPressed;
     bool mouseLeft, mouseRight, mouseMiddle;
-    boost::chrono::steady_clock::time_point lastMouseMotion{};
+    chrono_impl::steady_clock::time_point lastMouseMotion{};
 };
 
 #endif //EVENTS_H
