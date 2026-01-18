@@ -10,3 +10,4 @@ atlas_debug.png
 /android/.cxx
 *.apk
 *.aab
+/build

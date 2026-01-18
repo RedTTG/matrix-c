@@ -1,7 +1,0 @@
-/home/runner/work/matrix-c/matrix-c/build/CMakeFiles/matrix.dir
-/home/runner/work/matrix-c/matrix-c/build/CMakeFiles/edit_cache.dir
-/home/runner/work/matrix-c/matrix-c/build/CMakeFiles/rebuild_cache.dir
-/home/runner/work/matrix-c/matrix-c/build/_deps/glm-build/CMakeFiles/edit_cache.dir
-/home/runner/work/matrix-c/matrix-c/build/_deps/glm-build/CMakeFiles/rebuild_cache.dir
-/home/runner/work/matrix-c/matrix-c/build/_deps/glm-build/glm/CMakeFiles/edit_cache.dir
-/home/runner/work/matrix-c/matrix-c/build/_deps/glm-build/glm/CMakeFiles/rebuild_cache.dir
