@@ -42,7 +42,7 @@ android {
     externalNativeBuild {
         cmake {
             path = file("../../CMakeLists.txt")
-            version = "3.22.1"
+            // Use system CMake (in PATH) by omitting the `version` property. Gradle will fall back to PATH or cmake.dir.
         }
     }
 

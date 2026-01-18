@@ -13,3 +13,5 @@ atlas_debug.png
 *.aab
 *.jks
 /build
+/android/app/.cxx/
+/android/gradle
