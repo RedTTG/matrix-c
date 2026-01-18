@@ -1,5 +1,8 @@
 #include "events.h"
+
+#if !defined(__ANDROID__)
 #include <unordered_set>
+#endif
 
 #if defined(__linux__) && !defined(__ANDROID__)
 void handleMousePress(groupedEvents *events, const int number, bool pressed) {
@@ -99,6 +102,7 @@ void handleAndroidEvents(const renderer *rnd, AInputEvent* event) {
 }
 #endif
 
+#if !defined(__ANDROID__)
 void handleGLFWEvents(const renderer *rnd) {
     static std::unordered_set<int> pressedKeys;
     glfwPollEvents();
@@ -133,3 +137,4 @@ void handleGLFWEvents(const renderer *rnd) {
     }
     rnd->events->keysPressed = pressedKeys.size();
 }
+#endif

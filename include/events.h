@@ -20,7 +20,9 @@ void handleX11Events(const renderer *rnd);
 void handleAndroidEvents(const renderer *rnd, AInputEvent* event);
 #endif
 
+#if !defined(__ANDROID__)
 void handleGLFWEvents(const renderer *rnd);
+#endif
 
 struct groupedEvents {
     bool quit;

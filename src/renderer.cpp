@@ -33,12 +33,15 @@ renderer::renderer(options *opts) {
     instance = this;
 }
 
+#if !defined(__ANDROID__)
 void initializeGlad() {
     if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
         std::cerr << "Failed to initialize GLAD" << std::endl;
         exit(1);
     }
 }
+#endif
+
 #if defined(__linux__) && !defined(__ANDROID__)
 
 void glXInitializeGlad() {
@@ -139,6 +142,8 @@ void renderer::makeContext() {
 #endif
         return;
     }
+    
+#if !defined(__ANDROID__)
     // Create a normal GLFW context
 
     if (!glfwInit()) {
@@ -173,6 +178,10 @@ void renderer::makeContext() {
     glfwMakeContextCurrent(glfwWindow);
 
     initializeGlad();
+#else
+    std::cerr << "Non-wallpaper mode is not supported on Android" << std::endl;
+    exit(1);
+#endif
 }
 
 void renderer::makeFrameBuffers() {
@@ -298,7 +307,9 @@ void renderer::swapBuffers() {
         return;
     }
 #endif
+#if !defined(__ANDROID__)
     glfwSwapBuffers(glfwWindow);
+#endif
 }
 
 void renderer::destroy() const {
@@ -314,10 +325,12 @@ void renderer::destroy() const {
 #else
     if constexpr (false) {}
 #endif
+#if !defined(__ANDROID__)
     else {
         glfwDestroyWindow(glfwWindow);
         glfwTerminate();
     }
+#endif
 
     // Delete the framebuffers
     GL_CHECK(glDeleteFramebuffers(1, &fboC));
@@ -363,7 +376,9 @@ void renderer::getEvents() const {
         return;
     }
 #endif
+#if !defined(__ANDROID__)
     handleGLFWEvents(this);
+#endif
 }
 
 void renderer::loadApp() {

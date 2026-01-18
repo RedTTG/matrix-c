@@ -1,6 +1,6 @@
 #include "options.h"
 
-#include <chrono>
+#include "clock.h"
 #include <iostream>
 #include <string>
 #include <cstdio>
@@ -44,7 +44,7 @@ options* parseOptions(int argc, char *argv[]) {
             opts->wallpaperImagePath = std::string(buffer);
         } else {
             std::cerr << "Unknown argument: " << arg << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            std::this_thread::sleep_for(chrono_impl::milliseconds(10));
             showHelp();
             exit(1);
         }
