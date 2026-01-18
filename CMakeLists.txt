@@ -4,6 +4,14 @@ project(matrix)
 set(CMAKE_CXX_STANDARD 20)
 set(RC_DEPENDS "")
 
+# Detect Android platform
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    set(ANDROID_BUILD ON)
+    message(STATUS "Building for Android")
+else()
+    set(ANDROID_BUILD OFF)
+endif()
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -39,14 +47,19 @@ set(GLFW_BUILD_STATIC ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 
-find_package(Boost REQUIRED COMPONENTS chrono)
-find_package(OpenGL REQUIRED)
-find_package(glfw3 REQUIRED STATIC)
+# Skip GLFW and Boost on Android
+if(NOT ANDROID_BUILD)
+    find_package(Boost REQUIRED COMPONENTS chrono)
+    find_package(OpenGL REQUIRED)
+    find_package(glfw3 REQUIRED STATIC)
+endif()
 
 # Include directories
-include_directories(${OPENGL_INCLUDE_DIR})
-include_directories(${GLFW_INCLUDE_DIRS})
-include_directories(${Boost_INCLUDE_DIRS})
+if(NOT ANDROID_BUILD)
+    include_directories(${OPENGL_INCLUDE_DIR})
+    include_directories(${GLFW_INCLUDE_DIRS})
+    include_directories(${Boost_INCLUDE_DIRS})
+endif()
 
 include_directories("include")
 include_directories("generated")
@@ -69,10 +82,9 @@ embed_resource("assets/shaders/fragment/blur_fragment_shader.frag" "generated/bl
 
 embed_resource("assets/fonts/matrix_font.raw" "generated/matrix_font.h" "matrixFont")
 
-# Add executable
-add_executable(matrix
+# Define source files
+set(MATRIX_SOURCES
         src/glad.c
-        src/main.cpp
         src/shader.cpp
         src/options.cpp
         src/renderer.cpp
@@ -87,17 +99,44 @@ add_executable(matrix
         src/apps/debug.cpp
 )
 
-# Link libraries
-target_link_libraries(
-        matrix
-        ${OPENGL_LIBRARIES}
-        glfw
-        ${Boost_LIBRARIES}
-        glm::glm
-)
+# Add platform-specific sources
+if(ANDROID_BUILD)
+    list(APPEND MATRIX_SOURCES 
+        src/android_wallpaper.cpp
+        android/app/src/main/cpp/jni_bridge.cpp
+    )
+    # Build as shared library for Android
+    add_library(matrix SHARED ${MATRIX_SOURCES})
+else()
+    list(APPEND MATRIX_SOURCES src/main.cpp)
+    # Build as executable for other platforms
+    add_executable(matrix ${MATRIX_SOURCES})
+endif()
 
-# Add X11 support for Unix/Linux systems
-if (UNIX)
+# Link libraries
+if(ANDROID_BUILD)
+    target_link_libraries(
+            matrix
+            android
+            EGL
+            GLESv3
+            log
+            glm::glm
+    )
+    # Add Android include directory
+    target_include_directories(matrix PRIVATE include-android)
+else()
+    target_link_libraries(
+            matrix
+            ${OPENGL_LIBRARIES}
+            glfw
+            ${Boost_LIBRARIES}
+            glm::glm
+    )
+endif()
+
+# Add X11 support for Unix/Linux systems (non-Android)
+if (UNIX AND NOT ANDROID_BUILD)
     find_package(X11 REQUIRED)
     include_directories("include-linux")
     include_directories(${X11_INCLUDE_DIR})

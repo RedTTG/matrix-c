@@ -75,6 +75,26 @@ void handleX11Events(const renderer *rnd) {
 }
 #endif
 
+#ifdef __ANDROID__
+void handleAndroidEvents(const renderer *rnd, AInputEvent* event) {
+    if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
+        int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
+        float x = AMotionEvent_getX(event, 0);
+        float y = AMotionEvent_getY(event, 0);
+        
+        rnd->events->mouseX = static_cast<long>(x);
+        rnd->events->mouseY = static_cast<long>(y);
+        
+        if (action == AMOTION_EVENT_ACTION_DOWN || action == AMOTION_EVENT_ACTION_MOVE) {
+            rnd->events->mouseLeft = true;
+            rnd->events->lastMouseMotion = rnd->clock->now();
+        } else if (action == AMOTION_EVENT_ACTION_UP) {
+            rnd->events->mouseLeft = false;
+        }
+    }
+}
+#endif
+
 void handleGLFWEvents(const renderer *rnd) {
     static std::unordered_set<int> pressedKeys;
     glfwPollEvents();

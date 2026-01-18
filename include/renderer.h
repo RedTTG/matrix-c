@@ -15,6 +15,12 @@
 #include <GL/glx.h>
 #endif
 
+#ifdef __ANDROID__
+#include <EGL/egl.h>
+#include <GLES3/gl3.h>
+#include <android/native_window.h>
+#endif
+
 
 
 #define TITLE "Matrix rain"
@@ -53,6 +59,13 @@ struct renderer {
     int xinputOptCode{};
     static void handleSignal(int signal);
     void setupSignalHandling();
+#elif defined(__ANDROID__)
+    EGLDisplay eglDisplay = EGL_NO_DISPLAY;
+    EGLContext eglContext = EGL_NO_CONTEXT;
+    EGLSurface eglSurface = EGL_NO_SURFACE;
+    EGLConfig eglConfig;
+    ANativeWindow* nativeWindow = nullptr;
+    bool androidEGL = false;
 #else
 
 #endif

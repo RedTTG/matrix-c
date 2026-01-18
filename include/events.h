@@ -14,13 +14,19 @@ struct groupedEvents;
 void handleX11Events(const renderer *rnd);
 #endif
 
+#ifdef __ANDROID__
+#include <android/input.h>
+
+void handleAndroidEvents(const renderer *rnd, AInputEvent* event);
+#endif
+
 void handleGLFWEvents(const renderer *rnd);
 
 struct groupedEvents {
     bool quit;
     long mouseX, mouseY, keysPressed;
     bool mouseLeft, mouseRight, mouseMiddle;
-    boost::chrono::steady_clock::time_point lastMouseMotion{};
+    chrono_impl::steady_clock::time_point lastMouseMotion{};
 };
 
 #endif //EVENTS_H

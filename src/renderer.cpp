@@ -20,6 +20,10 @@ auto glXCreateContextAttribsARB = reinterpret_cast<glXCreateContextAttribsARBPro
         reinterpret_cast<const GLubyte *>("glXCreateContextAttribsARB")));
 #endif
 
+#ifdef __ANDROID__
+#include "android_wallpaper.h"
+#endif
+
 renderer *renderer::instance = nullptr;
 
 renderer::renderer(options *opts) {
@@ -122,8 +126,15 @@ void renderer::makeContext() {
 
         x11 = true;
 
+#elif defined(__ANDROID__)
+        // Android EGL setup
+        setupEGLForWallpaper(this, nativeWindow);
+        initializeGladES();
+        GL_CHECK(glViewport(0, 0, opts->width, opts->height));
+        androidEGL = true;
+
 #else
-        std::cerr << "Wallpaper mode is only supported on Linux" << std::endl;
+        std::cerr << "Wallpaper mode is only supported on Linux and Android" << std::endl;
         exit(1);
 #endif
         return;
@@ -281,6 +292,11 @@ void renderer::swapBuffers() {
         x11_SwapBuffers(this);
         return;
     }
+#elif defined(__ANDROID__)
+    if (androidEGL) {
+        android_SwapBuffers(this);
+        return;
+    }
 #endif
     glfwSwapBuffers(glfwWindow);
 }
@@ -290,6 +306,10 @@ void renderer::destroy() const {
 #ifdef __linux__
     if (x11) {
         XCloseDisplay(display);
+    }
+#elif defined(__ANDROID__)
+    if (androidEGL) {
+        destroyEGL(const_cast<renderer*>(this));
     }
 #else
     if constexpr (false) {}
@@ -334,6 +354,12 @@ void renderer::getEvents() const {
 #ifdef __linux__
     if (x11) {
         handleX11Events(this);
+        return;
+    }
+#elif defined(__ANDROID__)
+    if (androidEGL) {
+        // Android events handled via JNI callbacks
+        // No polling needed here
         return;
     }
 #endif
