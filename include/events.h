@@ -6,7 +6,7 @@ struct groupedEvents;
 #include <renderer.h>
 #include <iostream>
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 #include <X11/Xlib.h>
 #include <X11/extensions/XI2.h>
 #include <X11/extensions/XInput2.h>

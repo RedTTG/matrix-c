@@ -9,7 +9,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <shader.h>
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrender.h>
 #include <GL/glx.h>
@@ -25,7 +25,7 @@
 
 #define TITLE "Matrix rain"
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 typedef GLXContext (*glXCreateContextAttribsARBProc)(Display *, GLXFBConfig, GLXContext, Bool, const int *);
 #endif
 
@@ -42,7 +42,7 @@ static constexpr GLfloat ppFullQuadBufferData[] = {
 
 struct renderer {
     options *opts;
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
     Display *display = nullptr;
     Window desktop{};
     Window window{};

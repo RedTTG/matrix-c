@@ -10,7 +10,7 @@
 #include "ghosting_fragment_shader.h"
 #include "blur_fragment_shader.h"
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 #include "x11.h"
 #include <csignal>
 #include <signal.h>
@@ -39,7 +39,7 @@ void initializeGlad() {
         exit(1);
     }
 }
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 
 void glXInitializeGlad() {
     if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glXGetProcAddress))) {
@@ -64,7 +64,7 @@ void renderer::setupSignalHandling() {
 
 void renderer::makeContext() {
     if (opts->wallpaperMode) {
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
         display = XOpenDisplay(nullptr);
         setupWindowForWallpaperMode(this);
         int gl3attr[] = {
@@ -274,7 +274,7 @@ void renderer::initializePP() {
 }
 
 void renderer::initialize() {
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
     setupSignalHandling();
 #endif
     makeContext();
@@ -287,7 +287,7 @@ void renderer::initialize() {
 
 void renderer::swapBuffers() {
     GL_CHECK(glFlush());
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
     if (x11) {
         x11_SwapBuffers(this);
         return;
@@ -303,7 +303,7 @@ void renderer::swapBuffers() {
 
 void renderer::destroy() const {
     destroyApp();
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
     if (x11) {
         XCloseDisplay(display);
     }
@@ -351,7 +351,7 @@ void renderer::destroy() const {
 
 void renderer::getEvents() const {
     clock->calculateFrameSwapDeltaTime();
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
     if (x11) {
         handleX11Events(this);
         return;

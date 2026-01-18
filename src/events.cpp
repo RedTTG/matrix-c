@@ -1,7 +1,7 @@
 #include "events.h"
 #include <unordered_set>
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 void handleMousePress(groupedEvents *events, const int number, bool pressed) {
     switch (number) {
         case 1:
