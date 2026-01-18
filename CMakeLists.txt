@@ -92,7 +92,6 @@ embed_resource("assets/fonts/matrix_font.raw" "generated/matrix_font.h" "matrixF
 
 # Define source files
 set(MATRIX_SOURCES
-        src/glad.c
         src/shader.cpp
         src/options.cpp
         src/renderer.cpp
@@ -116,7 +115,10 @@ if(ANDROID_BUILD)
     # Build as shared library for Android
     add_library(matrix SHARED ${MATRIX_SOURCES})
 else()
-    list(APPEND MATRIX_SOURCES src/main.cpp)
+    list(APPEND MATRIX_SOURCES 
+        src/glad.c
+        src/main.cpp
+    )
     # Build as executable for other platforms
     add_executable(matrix ${MATRIX_SOURCES})
 endif()

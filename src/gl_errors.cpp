@@ -3,7 +3,12 @@
 #include <iostream>
 #include <ostream>
 #include <string>
+
+#ifdef __ANDROID__
+#include <GLES3/gl3.h>
+#else
 #include "glad.h"
+#endif
 
 void checkGLError(const char *call, const char *file, int line) {
     GLenum err;

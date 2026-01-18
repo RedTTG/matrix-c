@@ -4,7 +4,12 @@
 #include <string>
 #include <sstream>
 #include <array>
+
+#ifdef __ANDROID__
+#include <GLES3/gl3.h>
+#else
 #include "glad.h"
+#endif
 
 std::array<std::stringstream, 2> parseShader(const std::string *source);
 
