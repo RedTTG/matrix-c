@@ -1,8 +1,13 @@
 #ifndef FONTS_H
 #define FONTS_H
+
+#ifdef __ANDROID__
+#include <GLES3/gl3.h>
+#else
 #include <glad.h>
+#endif
+
 #include <vector>
-#include <boost/mpl/int.hpp>
 
 struct CharacterInfo {
     unsigned int xOffset;

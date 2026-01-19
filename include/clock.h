@@ -1,10 +1,17 @@
 #ifndef CLOCK_H
 #define CLOCK_H
+
+#ifdef __ANDROID__
+#include <chrono>
+namespace chrono_impl = std::chrono;
+#else
 #include <boost/chrono.hpp>
+namespace chrono_impl = boost::chrono;
+#endif
 
 struct tickRateClock {
-    boost::chrono::steady_clock::time_point lastTime{};
-    boost::chrono::steady_clock::time_point lastFrameSwapTime{};
+    chrono_impl::steady_clock::time_point lastTime{};
+    chrono_impl::steady_clock::time_point lastFrameSwapTime{};
     float deltaTime{};
     float frameSwapDeltaTime{};
 
@@ -17,7 +24,7 @@ struct tickRateClock {
 
     float floatTime() const;
 
-    static boost::chrono::steady_clock::time_point now();
+    static chrono_impl::steady_clock::time_point now();
 };
 
 #endif //CLOCK_H

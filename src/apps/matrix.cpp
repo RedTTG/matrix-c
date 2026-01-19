@@ -14,13 +14,23 @@
 
 
 void MatrixApp::setup() {
+    // Enable post-processing with framerate-independent ghosting
     rnd->opts->postProcessingOptions |= GHOSTING;
+#ifdef __ANDROID__
+    rnd->opts->ghostingPreviousFrameOpacity = 0.97f;
+#else
     rnd->opts->ghostingPreviousFrameOpacity = 0.997f;
+#endif
     rnd->opts->ghostingBlurSize = 0.1f;
+
     // Handle font initialization
     atlas = createFontTextureAtlas(matrixFont, &matrixFontInfo);
 
+#ifdef __ANDROID__
+    int rainLimit = 500;  // Reduced for mobile performance
+#else
     int rainLimit = MATRIX_RAIN_LIMIT;
+#endif
 
 
     // Calculate character scale and mouse radius
@@ -70,6 +80,30 @@ void MatrixApp::setup() {
     GL_CHECK(glGenVertexArrays(1, &vertexArray));
     GL_CHECK(glBindVertexArray(vertexArray));
 
+#ifdef __ANDROID__
+    // On Android/OpenGL ES, we need actual vertex data for the quad
+    // Create a buffer for the quad vertices (4 vertices for TRIANGLE_FAN)
+    GLuint quadVertexBuffer;
+    float quadVertices[] = {
+        0.0f, 0.0f,  // Bottom-left
+        1.0f, 0.0f,  // Bottom-right
+        1.0f, 1.0f,  // Top-right
+        0.0f, 1.0f   // Top-left
+    };
+    GL_CHECK(glGenBuffers(1, &quadVertexBuffer));
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, quadVertexBuffer));
+    GL_CHECK(glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW));
+
+    // Attribute 3 for quad vertex positions (not instanced)
+    GL_CHECK(glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 0, nullptr));
+    GL_CHECK(glEnableVertexAttribArray(3));
+    GL_CHECK(glVertexAttribDivisor(3, 0)); // Not instanced - same for all instances
+
+    // Unbind quad buffer before setting up instance buffer
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, 0));
+#endif
+
+    // Instance data buffer
     GL_CHECK(glGenBuffers(1, &vertexBuffer));
     GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer));
     GL_CHECK(
@@ -107,6 +141,13 @@ void MatrixApp::setup() {
     GL_CHECK(glVertexAttribDivisor(0, 1));
     GL_CHECK(glVertexAttribDivisor(1, 1));
     GL_CHECK(glVertexAttribDivisor(2, 1));
+
+#ifdef __ANDROID__
+    // Re-bind the quad buffer to attribute 3 to ensure it's set correctly
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, quadVertexBuffer));
+    GL_CHECK(glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 0, nullptr));
+    GL_CHECK(glBindBuffer(GL_ARRAY_BUFFER, 0));
+#endif
 
     // Initialize vertices
     for (int i = 0; i < rainData.capacity(); ++i) {
@@ -148,6 +189,7 @@ void MatrixApp::setup() {
 void MatrixApp::loop() {
     program->useProgram();
 
+
     // Bind glyph buffer and texture
     GL_CHECK(glActiveTexture(GL_TEXTURE0));
     GL_CHECK(glBindTexture(GL_TEXTURE_2D, atlas->glyphTexture));
@@ -174,7 +216,8 @@ void MatrixApp::loop() {
 
     const int reassignedRaindrop = amountOfReassignedRaindrops > 0 ? random_int(0, rainData.capacity() - 1) : -1;
 
-    int activeCursorPardons = 0;
+    // Update all rain drops every frame (essential for animation and ghosting trails)
+    activeCursorPardons = 0;
     for (int i = 0; i < rainData.capacity(); ++i) {
         incrementRain(i, i == reassignedRaindrop);
         if (rainData[i].cursorPardons > 0) {
@@ -187,7 +230,9 @@ void MatrixApp::loop() {
 
     // Render
     GL_CHECK(glBindVertexArray(vertexArray));
+
     GL_CHECK(glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, rainData.capacity()));
+
     // rnd->fboPTextureOutput = atlas->glyphTexture;
 }
 
@@ -270,6 +315,7 @@ void MatrixApp::incrementRain(const int index, const bool reassigned) {
         }
     }
 
+#ifndef __ANDROID__
     if (rainData[index].cursorPardons == 0 and distance < mouseRadius and random_int(0, 10) != 0) {
         // Push the raindrop away from the cursor
         const float force = (mouseRadius - distance) / mouseRadius;
@@ -280,7 +326,9 @@ void MatrixApp::incrementRain(const int index, const bool reassigned) {
         rainData[index].pushX += pushX;
         rainData[index].pushY += pushY;
         rainDrawData[index].y += pushY;
-    } else if (rainData[index].cursorPardons > 0) {
+    } else
+#endif
+    if (rainData[index].cursorPardons > 0) {
         // Expand from the cursor
         rainDrawData[index].x += rainData[index].pushX;
         rainDrawData[index].y += rainData[index].pushY;

@@ -1,6 +1,6 @@
 #include "options.h"
 
-#include <chrono>
+#include "clock.h"
 #include <iostream>
 #include <string>
 #include <cstdio>

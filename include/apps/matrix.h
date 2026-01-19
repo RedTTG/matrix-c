@@ -6,7 +6,11 @@
 #include "matrix_fragment_rainbow_shader.h"
 #include "matrix_fragment_wallpaper_shader.h"
 
+#ifdef __ANDROID__
+#include <GLES3/gl3.h>
+#else
 #include "glad.h"
+#endif
 
 #define MATRIX_RAIN_LIMIT 1000
 #define MATRIX_DELTA_MULTIPLIER 20

@@ -1,22 +1,23 @@
 #include "clock.h"
 
 void tickRateClock::calculateDeltaTime() {
-    const boost::chrono::steady_clock::time_point currentTime = now();
-    const boost::chrono::duration<float> deltaTime = boost::chrono::duration_cast<boost::chrono::duration<float>>(
+    const chrono_impl::steady_clock::time_point currentTime = now();
+    const chrono_impl::duration<float> deltaTime = chrono_impl::duration_cast<chrono_impl::duration<float>>(
         currentTime - lastTime);
     this->lastTime = currentTime;
     this->deltaTime = deltaTime.count();
 }
 
 void tickRateClock::calculateFrameSwapDeltaTime() {
-    const boost::chrono::steady_clock::time_point currentTime = now();
-    const boost::chrono::duration<float> frameSwapDeltaTime = boost::chrono::duration_cast<boost::chrono::duration<float>>(
+    const chrono_impl::steady_clock::time_point currentTime = now();
+    const chrono_impl::duration<float> frameSwapDeltaTime = chrono_impl::duration_cast<chrono_impl::duration<float>>(
         currentTime - lastFrameSwapTime);
     this->frameSwapDeltaTime = frameSwapDeltaTime.count();
 }
 
 void tickRateClock::initialize() {
     this->lastTime = now();
+    this->lastFrameSwapTime = now();
 }
 
 void tickRateClock::resetFrameSwapTime() {
@@ -24,11 +25,11 @@ void tickRateClock::resetFrameSwapTime() {
 }
 
 float tickRateClock::floatTime() const {
-    const boost::chrono::steady_clock::time_point currentTime = now();
-    const boost::chrono::duration<float> elapsedTime = boost::chrono::duration_cast<boost::chrono::duration<float>>(currentTime.time_since_epoch());
+    const chrono_impl::steady_clock::time_point currentTime = now();
+    const chrono_impl::duration<float> elapsedTime = chrono_impl::duration_cast<chrono_impl::duration<float>>(currentTime.time_since_epoch());
     return elapsedTime.count();
 }
 
-boost::chrono::steady_clock::time_point tickRateClock::now() {
-    return boost::chrono::steady_clock::now();
+chrono_impl::steady_clock::time_point tickRateClock::now() {
+    return chrono_impl::steady_clock::now();
 }

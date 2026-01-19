@@ -1,5 +1,6 @@
 #include "apps.h"
 
+#include "clock.h"
 #include <cstring>
 #include <iostream>
 #include <thread>

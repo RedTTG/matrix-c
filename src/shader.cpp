@@ -4,6 +4,33 @@
 #include <iostream>
 #include <vector>
 
+
+// Helper function to convert OpenGL shaders to OpenGL ES compatible version
+std::string convertShaderForES(const std::string& source) {
+#ifdef __ANDROID__
+    std::string result = source;
+    
+    // Constants for version strings
+    const char* desktopVersion = "#version 330 core";
+    const char* esVersion = "#version 300 es";
+    const size_t desktopVersionLen = strlen(desktopVersion);
+    
+    // Replace #version 330 core with #version 300 es
+    size_t versionPos = result.find(desktopVersion);
+    if (versionPos != std::string::npos) {
+        result.replace(versionPos, desktopVersionLen, esVersion);
+        
+        // Add precision qualifiers after version directive
+        size_t insertPos = versionPos + strlen(esVersion);
+        result.insert(insertPos, "\nprecision mediump float;");
+    }
+    
+    return result;
+#else
+    return source;
+#endif
+}
+
 std::array<std::stringstream, 2> parseShader(const std::string *source) {
     std::istringstream stream(*source);
     std::string line;
@@ -61,9 +88,14 @@ void ShaderProgram::linkProgram() const {
     if (InfoLogLength > 0) {
         std::vector<char> ProgramErrorMessage(InfoLogLength + 1);
         GL_CHECK(glGetProgramInfoLog(program, InfoLogLength, nullptr, &ProgramErrorMessage[0]));
-        printf("%s\n", &ProgramErrorMessage[0]);
+        std::cerr << "Shader link log: " << &ProgramErrorMessage[0] << std::endl;
+    }
+
+    if (Result == GL_FALSE) {
+        std::cerr << "Shader program linking failed!" << std::endl;
     }
 }
+
 
 GLuint ShaderProgram::getUniformLocation(const GLchar *name) const {
     return glGetUniformLocation(program, name);
@@ -79,15 +111,20 @@ void ShaderProgram::uniformBlockBinding(const GLuint blockIndex, const GLuint bl
 
 void ShaderProgram::loadShader(const unsigned char *source, const int length, const GLuint type) {
     const std::string src(reinterpret_cast<const char *>(source), length);
-    return loadShader(src.c_str(), type);
+    const std::string convertedSrc = convertShaderForES(src);
+    return loadShader(convertedSrc.c_str(), type);
 }
 
 void ShaderProgram::loadShader(const char *source, const GLuint type) {
+    // Convert shader for OpenGL ES if needed
+    const std::string convertedSource = convertShaderForES(std::string(source));
+    const char* finalSource = convertedSource.c_str();
+    
     // Create a new openGL shader
     const GLuint shader = glCreateShader(type);
 
     // Compile the shader from source
-    GL_CHECK(glShaderSource(shader, 1, &source, nullptr));
+    GL_CHECK(glShaderSource(shader, 1, &finalSource, nullptr));
     GL_CHECK(glCompileShader(shader));
 
     // Check for compilation errors
@@ -98,7 +135,8 @@ void ShaderProgram::loadShader(const char *source, const GLuint type) {
         GL_CHECK(glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength));
         std::vector<char> log(logLength);
         GL_CHECK(glGetShaderInfoLog(shader, logLength, &logLength, log.data()));
-        std::cerr << "Shader compilation failed: " << log.data() << std::endl;
+        std::cerr << "Shader compilation failed (type=" << type << "): " << log.data() << std::endl;
+        std::cerr << "Shader source (first 500 chars): " << std::string(finalSource).substr(0, 500) << std::endl;
     }
 
     // Attach the shader to the program
