@@ -4,12 +4,12 @@
 layout (location = 0) in vec2 aPos;
 layout (location = 1) in vec2 aUV;
 
-uniform vec2 uPos;
-uniform vec2 uSize;
-uniform vec4 uUV;       // u0,v0,u1,v1
-uniform vec2 uScreen;   // screen width/height
-uniform vec2 uOffset;   // bottom-right cat zone offset
-uniform float uScale;   // uniform scale
+uniform mediump vec2 uPos;
+uniform mediump vec2 uSize;
+uniform mediump vec4 uUV;       // u0,v0,u1,v1
+uniform mediump vec2 uScreen;   // screen width/height
+uniform mediump vec2 uOffset;   // bottom-right cat zone offset
+uniform mediump float uScale;   // uniform scale
 
 out vec2 vUV;
 out vec2 vLocalUV; // pass the sprite-local UV (0..1) so fragment can test cutoffs in sprite space
@@ -36,12 +36,12 @@ in vec2 vLocalUV;
 out vec4 fragColor;
 
 uniform sampler2D uTexture;
-uniform vec4 uColor; // tint, default (1,1,1,1)
+uniform mediump vec4 uColor; // tint, default (1,1,1,1)
 
-uniform vec4 uUV; // sprite rect in atlas: u0,v0,u1,v1
+uniform mediump vec4 uUV; // sprite rect in atlas: u0,v0,u1,v1
 // cutoff: (left, bottom, right, top) in sprite-local 0..1 space
 // vLocalUV is the sprite-local UV where y=0 is bottom and y=1 is top
-uniform vec4 uCutoff; // x:left%, y:bottom%, z:right%, w:top% (0.0 - 1.0, relative to the sprite)
+uniform mediump vec4 uCutoff; // x:left%, y:bottom%, z:right%, w:top% (0.0 - 1.0, relative to the sprite)
 
 void main() {
     // Determine sprite-local UV robustly:
