@@ -40,8 +40,16 @@ class MatrixWallpaperService : WallpaperService() {
             super.onSurfaceChanged(holder, format, width, height)
             Log.i(TAG, "Surface changed: ${width}x${height}")
 
-            // Stop existing render thread if any
-            renderThread?.stopRendering()
+            // Stop existing render thread if any and wait for it to finish
+            renderThread?.let { thread ->
+                Log.i(TAG, "Stopping existing render thread...")
+                thread.stopRendering()
+                // Wait for the thread to fully stop before proceeding
+                thread.join(2000) // Wait up to 2 seconds
+                if (thread.isAlive) {
+                    Log.w(TAG, "Render thread didn't stop in time, forcing...")
+                }
+            }
             renderThread = null
 
             // CRITICAL: Give Android's hardware renderer (hwuiTask) time to fully release the surface

@@ -237,10 +237,16 @@ void MatrixApp::loop() {
 }
 
 void MatrixApp::destroy() {
-    atlas->destroy();
+    if (atlas != nullptr) {
+        atlas->destroy();
+        delete atlas;
+    }
     GL_CHECK(glDeleteBuffers(1, &vertexBuffer));
     GL_CHECK(glDeleteVertexArrays(1, &vertexArray));
-    program->destroy();
+    if (program != nullptr) {
+        program->destroy();
+        delete program;
+    }
 }
 
 int MatrixApp::random_int(const int a, const int b) {

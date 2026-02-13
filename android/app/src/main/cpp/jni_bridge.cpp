@@ -155,6 +155,13 @@ Java_com_redttg_matrix_MatrixWallpaperService_nativeRender(JNIEnv* env, jobject 
         return;
     }
 
+    // Validate EGL context is still valid before rendering
+    if (rnd->eglDisplay == EGL_NO_DISPLAY ||
+        rnd->eglContext == EGL_NO_CONTEXT ||
+        rnd->eglSurface == EGL_NO_SURFACE) {
+        return;
+    }
+
     static int frameCount = 0;
     static bool loggedFirstFrames = false;
 
@@ -204,14 +211,54 @@ Java_com_redttg_matrix_MatrixWallpaperService_nativeDestroy(JNIEnv* env, jobject
     
     if (g_renderer) {
         try {
+            LOGI("Checking EGL context validity...");
+            // CRITICAL: Make the context current before destroying OpenGL resources
+            // This prevents "call to OpenGL ES API with no current context" errors
+            if (g_renderer->eglDisplay != EGL_NO_DISPLAY &&
+                g_renderer->eglContext != EGL_NO_CONTEXT &&
+                g_renderer->eglSurface != EGL_NO_SURFACE) {
+
+                LOGI("Attempting to make EGL context current...");
+                EGLBoolean result = eglMakeCurrent(g_renderer->eglDisplay,
+                                                   g_renderer->eglSurface,
+                                                   g_renderer->eglSurface,
+                                                   g_renderer->eglContext);
+                if (result == EGL_TRUE) {
+                    LOGI("EGL context made current for cleanup");
+                    glFinish(); // Wait for all GL operations to complete
+                    LOGI("glFinish completed");
+                } else {
+                    LOGE("Failed to make EGL context current for cleanup: 0x%x", eglGetError());
+                    // Context is invalid, skip OpenGL cleanup to avoid crash
+                    LOGI("Skipping renderer cleanup due to invalid context");
+                    delete g_renderer;
+                    g_renderer = nullptr;
+                    return;
+                }
+            } else {
+                LOGE("EGL context/surface/display invalid, skipping cleanup");
+                delete g_renderer;
+                g_renderer = nullptr;
+                return;
+            }
+
+            LOGI("Calling renderer->destroy()...");
             g_renderer->destroy();
+            LOGI("renderer->destroy() completed");
+
             delete g_renderer;
+            LOGI("Renderer deleted");
             g_renderer = nullptr;
             LOGI("Renderer destroyed successfully");
         } catch (const std::exception& e) {
             LOGE("Exception during renderer destruction: %s", e.what());
             g_renderer = nullptr;
+        } catch (...) {
+            LOGE("Unknown exception during renderer destruction");
+            g_renderer = nullptr;
         }
+    } else {
+        LOGI("nativeDestroy called but g_renderer is null");
     }
 }
 

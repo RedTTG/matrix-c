@@ -64,5 +64,8 @@ void TriangleApp::loop() {
 void TriangleApp::destroy() {
     GL_CHECK(glDeleteBuffers(1, &vertexBuffer));
     GL_CHECK(glDeleteVertexArrays(1, &vertexArray));
-    program->destroy();
+    if (program != nullptr) {
+        program->destroy();
+        delete program;
+    }
 }

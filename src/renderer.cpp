@@ -412,7 +412,50 @@ void renderer::swapBuffers() {
 }
 
 void renderer::destroy() const {
-    destroyApp();
+    // Destroy app first if it exists (while context is still valid)
+    if (app != nullptr) {
+        try {
+            destroyApp();
+        } catch (...) {
+            // Catch any exceptions during app cleanup
+        }
+    }
+
+    // CRITICAL: Delete OpenGL resources BEFORE destroying the EGL context
+    // Delete the framebuffers
+    try {
+        GL_CHECK(glDeleteFramebuffers(1, &fboC));
+        GL_CHECK(glDeleteTextures(1, &fboCTexture));
+        GL_CHECK(glDeleteFramebuffers(1, &fboM));
+        GL_CHECK(glDeleteTextures(1, &fboMTexture));
+        GL_CHECK(glDeleteFramebuffers(1, &fboP));
+        GL_CHECK(glDeleteTextures(1, &fboPTexture));
+
+        GL_CHECK(glDeleteFramebuffers(1, &fboCOutput));
+        GL_CHECK(glDeleteTextures(1, &fboCTextureOutput));
+        GL_CHECK(glDeleteFramebuffers(1, &fboMOutput));
+        GL_CHECK(glDeleteTextures(1, &fboMTextureOutput));
+        GL_CHECK(glDeleteFramebuffers(1, &fboPOutput));
+        GL_CHECK(glDeleteTextures(1, &fboPTextureOutput));
+
+        GL_CHECK(glDeleteRenderbuffers(1, &RBO));
+        GL_CHECK(glDeleteVertexArrays(1, &ppFullQuadArray));
+        GL_CHECK(glDeleteBuffers(1, &ppFullQuadBuffer));
+
+        if (ppFinalProgram != nullptr) {
+            ppFinalProgram->destroy();
+        }
+        if (opts->postProcessingOptions & GHOSTING && ppGhostingProgram != nullptr) {
+            ppGhostingProgram->destroy();
+        }
+        if (opts->postProcessingOptions & BLUR && ppBlurProgram != nullptr) {
+            ppBlurProgram->destroy();
+        }
+    } catch (...) {
+        // Catch any exceptions during OpenGL cleanup
+    }
+
+    // NOW destroy the window/context after OpenGL cleanup is done
 #if defined(__linux__) && !defined(__ANDROID__)
     if (x11) {
         XCloseDisplay(display);
@@ -431,31 +474,6 @@ void renderer::destroy() const {
     }
 #endif
 
-    // Delete the framebuffers
-    GL_CHECK(glDeleteFramebuffers(1, &fboC));
-    GL_CHECK(glDeleteTextures(1, &fboCTexture));
-    GL_CHECK(glDeleteFramebuffers(1, &fboM));
-    GL_CHECK(glDeleteTextures(1, &fboMTexture));
-    GL_CHECK(glDeleteFramebuffers(1, &fboP));
-    GL_CHECK(glDeleteTextures(1, &fboPTexture));
-
-    GL_CHECK(glDeleteFramebuffers(1, &fboCOutput));
-    GL_CHECK(glDeleteTextures(1, &fboCTextureOutput));
-    GL_CHECK(glDeleteFramebuffers(1, &fboMOutput));
-    GL_CHECK(glDeleteTextures(1, &fboMTextureOutput));
-    GL_CHECK(glDeleteFramebuffers(1, &fboPOutput));
-    GL_CHECK(glDeleteTextures(1, &fboPTextureOutput));
-
-    GL_CHECK(glDeleteRenderbuffers(1, &RBO));
-    GL_CHECK(glDeleteVertexArrays(1, &ppFullQuadArray));
-    GL_CHECK(glDeleteBuffers(1, &ppFullQuadBuffer));
-    ppFinalProgram->destroy();
-    if (opts->postProcessingOptions & GHOSTING) {
-        ppGhostingProgram->destroy();
-    }
-    if (opts->postProcessingOptions & BLUR) {
-        ppBlurProgram->destroy();
-    }
     delete clock;
     delete events;
     delete opts;
