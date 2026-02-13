@@ -3,15 +3,19 @@
 # Navigate to the android directory
 cd "$(dirname "$0")/.."
 
-echo "Building debug APK..."
-./gradlew assembleDebug
+echo "Running CMake to regenerate shader headers for Android..."
+cd ..
+rm -rf android/app/.cxx
+cmake -DANDROID_BUILD=ON -B android/app/.cxx/Debug -S .
 
 if [ $? -ne 0 ]; then
-    echo "Build failed!"
+    echo "CMake configuration failed!"
     exit 1
 fi
 
-echo "Installing APK..."
+cd android
+
+echo "Building and installing APK..."
 ./gradlew installDebug
 
 if [ $? -ne 0 ]; then
@@ -19,11 +23,16 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "Killing existing app instance to force clean relaunch..."
+adb shell am force-stop com.redttg.matrix
+sleep 1
+
 echo "Clearing logcat buffer..."
 adb logcat -c
 
-echo "Starting app..."
-adb shell am start -n com.redttg.matrix/com.redttg.matrix.MainActivity
+echo "Starting wallpaper service..."
+adb shell am start -n com.redttg.matrix/.MainActivity
 
 echo "Showing logs (press Ctrl+C to stop)..."
+sleep 1
 adb logcat -v color --pid=$(adb shell pidof -s com.redttg.matrix)
