@@ -33,10 +33,6 @@ android {
                 )
             }
         }
-
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
-        }
     }
 
     signingConfigs {
@@ -53,6 +49,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Only build for arm64-v8a in debug to speed up development
+            ndk {
+                abiFilters += "arm64-v8a"
+            }
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
@@ -61,6 +63,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Build all architectures for release
+            ndk {
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            }
         }
     }
 
