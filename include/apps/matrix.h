@@ -12,6 +12,8 @@
 #include "glad.h"
 #endif
 
+#include "matrix_cat_extension.h"
+
 #define MATRIX_RAIN_LIMIT 1000
 #define MATRIX_DELTA_MULTIPLIER 20
 #define MATRIX_COLOR_VARIATION 0.05
@@ -28,6 +30,10 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifndef MATRIX_CAT
+#define MATRIX_CAT true
+#endif
+
 struct RainDrawData {
     float x, y;
     float colorOffset;
@@ -39,6 +45,8 @@ struct RainData {
     float pushX, pushY = 0;
     int cursorPardons = 0;
 };
+
+
 
 class MatrixApp final : public App {
 public:
@@ -72,6 +80,12 @@ private:
     const float rot_d15 = MATRIX_ROTATION / 15.0;
     const float rot_d15_m2 = rot_d15 * 2;
     const float rot_d15_d2 = rot_d15 / 2;
+
+    // Matrix cat definitions
+    void catSetup();
+    void catSaveData();
+    void catLoop();
+    CatData cat;
 };
 
 #endif //MATRIX_H

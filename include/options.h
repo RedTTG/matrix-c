@@ -31,6 +31,7 @@ struct options {
     float swapTime = 1.0f / 60.0f;  // Framerate basically
     bool loopWithSwap = true;
     std::optional<std::string> wallpaperImagePath = std::nullopt;
+    std::optional<std::string> catDataPath = std::nullopt;
 
     void maskPostProcessingOptionsWithUserAllowed();
 };

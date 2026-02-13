@@ -32,6 +32,10 @@ void MatrixApp::setup() {
     int rainLimit = MATRIX_RAIN_LIMIT;
 #endif
 
+    if constexpr (MATRIX_CAT) {
+        catSetup();
+    }
+
 
     // Calculate character scale and mouse radius
     float characterScale = static_cast<float>(rnd->opts->height) / (MATRIX_DEBUG ? 20.0 : 70.0) / static_cast<float>(matrixFontInfo.size);
@@ -204,6 +208,9 @@ void MatrixApp::loop() {
     GL_CHECK(glUniform1f(ui_Time, rnd->clock->floatTime()));
 
     baseColor += rnd->clock->deltaTime / MATRIX_DELTA_MULTIPLIER;
+    if (baseColor > 1.0f) {
+        baseColor -= 1.0f;
+    }
 
     int amountOfReassignedRaindrops = std::max(0, static_cast<int>(rnd->events->keysPressed) * MATRIX_EFFECT_PER_KEYPRESS);
     if (rnd->events->mouseLeft) {
@@ -232,6 +239,11 @@ void MatrixApp::loop() {
     GL_CHECK(glBindVertexArray(vertexArray));
 
     GL_CHECK(glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, rainData.capacity()));
+
+    if constexpr (MATRIX_CAT) {
+        catLoop();
+        // Run the cat app in the corner
+    }
 
     // rnd->fboPTextureOutput = atlas->glyphTexture;
 }

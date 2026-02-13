@@ -24,6 +24,9 @@ enum ShaderType {
 class ShaderProgram {
 public:
     ShaderProgram();
+    ~ShaderProgram() {
+        destroy();
+    }
     void destroy() const;
     void useProgram() const;
     void linkProgram() const;

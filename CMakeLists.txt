@@ -92,6 +92,9 @@ if(ANDROID_BUILD)
     embed_resource("assets/shaders/fragment-es/basic_texture_fragment_shader.frag" "generated/basic_texture_fragment_shader.h" "basicTextureFragmentShader")
     embed_resource("assets/shaders/fragment-es/ghosting_fragment_shader.frag" "generated/ghosting_fragment_shader.h" "ghostingFragmentShader")
     embed_resource("assets/shaders/fragment-es/blur_fragment_shader.frag" "generated/blur_fragment_shader.h" "blurFragmentShader")
+    # Sprite shaders (ES versions for Android)
+    embed_resource("assets/shaders/sprite_shader-es.glsl" "generated/sprite_shader.h" "spriteShader")
+    embed_resource("assets/shaders/sprite_glow_shader-es.glsl" "generated/sprite_glow_shader.h" "spriteGlowShader")
 else()
     # OpenGL 3.3 core shaders for Desktop
     embed_resource("assets/shaders/triangle.glsl" "generated/triangle_shader.h" "triangleShader")
@@ -104,13 +107,23 @@ else()
     embed_resource("assets/shaders/vertex/basic_texture_vertex_shader.vert" "generated/basic_texture_vertex_shader.h" "basicTextureVertexShader")
     embed_resource("assets/shaders/fragment/ghosting_fragment_shader.frag" "generated/ghosting_fragment_shader.h" "ghostingFragmentShader")
     embed_resource("assets/shaders/fragment/blur_fragment_shader.frag" "generated/blur_fragment_shader.h" "blurFragmentShader")
+    # Sprite shaders for Desktop
+    embed_resource("assets/shaders/sprite_shader.glsl" "generated/sprite_shader.h" "spriteShader")
+    embed_resource("assets/shaders/sprite_glow_shader.glsl" "generated/sprite_glow_shader.h" "spriteGlowShader")
 endif()
 
 embed_resource("assets/fonts/matrix_font.raw" "generated/matrix_font.h" "matrixFont")
 
+# Embed texture atlases
+embed_resource("assets/sprites/Cat.rgba" "generated/cat_atlas_texture.h" "catAtlasTexture")
+embed_resource("assets/sprites/HeadpatCursor.rgba" "generated/headpat_cursor_atlas_texture.h" "headpatCursorAtlasTexture")
+embed_resource("assets/sprites/Letters.rgba" "generated/letter_atlas_texture.h" "letterAtlasTexture")
+embed_resource("assets/sprites/UI.rgba" "generated/ui_atlas_texture.h" "uiAtlasTexture")
+
 # Define source files
 set(MATRIX_SOURCES
         src/shader.cpp
+        src/sprite.cpp
         src/options.cpp
         src/renderer.cpp
         src/events.cpp
@@ -121,6 +134,8 @@ set(MATRIX_SOURCES
         src/apps/triangle.cpp
         src/apps.cpp
         src/apps/matrix.cpp
+        src/apps/matrix_cat/matrix_cat_extension.cpp
+        src/apps/matrix_cat/matrix_cat_animation.cpp
         src/apps/debug.cpp
 )
 

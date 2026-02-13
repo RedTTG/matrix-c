@@ -18,6 +18,7 @@ atlas_debug.png
 /build
 /android/app/.cxx/
 /android/gradle
+/python_generators/debug/
 /assets/sprites/*.png
 /assets/sprites/*.rgba
 /assets/sprites/include/*

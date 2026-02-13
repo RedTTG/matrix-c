@@ -42,6 +42,10 @@ options* parseOptions(int argc, char *argv[]) {
             auto buffer = new char[256];
             sscanf(argv[i], "--image=%255s", buffer);
             opts->wallpaperImagePath = std::string(buffer);
+        } else if (arg.find("--catdata=") == 0) {
+            auto buffer = new char[256];
+            sscanf(argv[i], "--catdata=%255s", buffer);
+            opts->catDataPath = std::string(buffer);
         } else {
             std::cerr << "Unknown argument: " << arg << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(10));

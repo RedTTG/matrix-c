@@ -30,7 +30,7 @@ static constexpr FontInfo {} = {{
 
 """
 
-os.makedirs(INCLUDE_DIRECTORY := os.path.join('assets', 'fonts', 'include'), exist_ok=True)
+os.makedirs(INCLUDE_DIRECTORY := os.path.join('..', 'assets', 'fonts', 'include'), exist_ok=True)
 
 
 class CustomMetricsHandler(pe.SheetHandler):
@@ -49,7 +49,7 @@ class CustomMetricsHandler(pe.SheetHandler):
 print("Using PGE version", pe.__version__)
 pe.init((0, 0))
 
-text = pe.Text(CHARACTERS, os.path.join('assets', 'fonts', FONT), FONT_SIZE, colors=[pe.colors.white, None])
+text = pe.Text(CHARACTERS, os.path.join('..', 'assets', 'fonts', FONT), FONT_SIZE, colors=[pe.colors.white, None])
 metrics = text.font.metrics(text.text)
 
 # Pack the characters into a texture atlas
@@ -75,7 +75,7 @@ if DEBUG:
 
     atlas.surface.save_to_file(f"atlas_debug.png")
 
-with open(os.path.join('assets', 'fonts', f'{NAME}.raw'), 'wb') as file:
+with open(os.path.join('..', 'assets', 'fonts', f'{NAME}.raw'), 'wb') as file:
     for y in range(atlas.surface.height):
         for x in range(atlas.surface.width):
             r, g, b, a = atlas.surface.get_at((x, y))
